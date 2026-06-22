@@ -4,10 +4,6 @@ import { useEffect, useState } from 'react'
 import { collection, getDocs, addDoc, orderBy, query, Timestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 
-const ONESIGNAL_APP_ID = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID!
-const ONESIGNAL_REST_KEY = process.env.NEXT_PUBLIC_ONESIGNAL_REST_KEY!
-const APP_ICON_URL = 'https://mansion-nightclub-portal.vercel.app/app-icon.png'
-
 const audiences = [
   { value: 'everyone', label: 'Everyone', desc: 'All subscribers' },
   { value: 'ticketHolders', label: 'Ticket Holders', desc: 'Anyone who bought a ticket' },
@@ -75,78 +71,45 @@ export default function NotificationsPage() {
     setSending(true)
     setResult(null)
 
-    const payload: Record<string, unknown> = {
-      app_id: ONESIGNAL_APP_ID,
-      headings: { en: title },
-      contents: { en: body },
-      large_icon: APP_ICON_URL,
-      chrome_web_icon: APP_ICON_URL,
-      apns_env: 'production',
-    }
-
-    if (imageUrl.trim()) {
-      payload.big_picture = imageUrl.trim()
-      payload.ios_attachments = { id1: imageUrl.trim() }
-    }
-
+    const data: Record<string, unknown> = {}
     if (linkType === 'event' && selectedEventId) {
-      payload.url = `mansion://events/${selectedEventId}`
-      payload.data = { type: 'event', id: selectedEventId }
+      data.type = 'event'
+      data.id = selectedEventId
     } else if (linkType === 'signup' && selectedSignUpSlug) {
-      payload.url = `mansion://signups/${selectedSignUpSlug}`
-      payload.data = { type: 'signup', slug: selectedSignUpSlug }
-    }
-
-    if (audience === 'everyone') {
-      const subSnap = await getDocs(collection(db, 'push_subscriptions'))
-      const ids = subSnap.docs.map(d => d.data().subscriptionId as string).filter(Boolean)
-      if (ids.length > 0) {
-        payload.include_subscription_ids = ids
-      } else {
-        payload.included_segments = ['All']
-      }
-    } else if (audience === 'ticketHolders') {
-      payload.filters = [{ field: 'tag', key: 'has_ticket', relation: '=', value: 'true' }]
-    } else if (audience === 'vipOnly') {
-      payload.filters = [{ field: 'tag', key: 'tier', relation: '=', value: 'vip' }]
+      data.type = 'signup'
+      data.slug = selectedSignUpSlug
     }
 
     try {
-      const res = await fetch('https://onesignal.com/api/v1/notifications', {
+      const res = await fetch('/api/notifications/send', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Key ${ONESIGNAL_REST_KEY}`,
-        },
-        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.trim(),
+          body: body.trim(),
+          audience,
+          ...(imageUrl.trim() ? { imageUrl: imageUrl.trim() } : {}),
+          ...(Object.keys(data).length ? { data } : {}),
+        }),
       })
-      const data = await res.json()
-      if (res.ok && data.id) {
-        setResult({ success: true, message: 'Notification queued — checking delivery…' })
-        setTimeout(async () => {
-          try {
-            const check = await fetch(`https://onesignal.com/api/v1/notifications/${data.id}?app_id=${ONESIGNAL_APP_ID}`, {
-              headers: { 'Authorization': `Key ${ONESIGNAL_REST_KEY}` }
-            })
-            const r = await check.json()
-            const successful = r.successful ?? 0
-            const errored = r.errored ?? 0
-            setResult({ success: true, message: successful > 0
-              ? `Delivered to ${successful} device${successful !== 1 ? 's' : ''}${errored > 0 ? ` (${errored} unreachable)` : ''}`
-              : errored > 0
-                ? `Queued — ${errored} device${errored !== 1 ? 's' : ''} currently unreachable (notifications may be disabled)`
-                : 'Sent successfully'
-            })
-          } catch { /* leave original message */ }
-        }, 5000)
+      const json = await res.json()
+      if (res.ok) {
+        const { successful, total, errors } = json
+        setResult({
+          success: successful > 0 || total === 0,
+          message: total === 0
+            ? 'No registered devices yet — open the app on each phone first'
+            : successful > 0
+              ? `Delivered to ${successful} of ${total} device${total !== 1 ? 's' : ''}${errors?.length ? ` (${errors.join(', ')})` : ''}`
+              : `Failed — ${errors?.join(', ') ?? 'unknown error'}`,
+        })
 
-        // Save to Firestore
         await addDoc(collection(db, 'sent_notifications'), {
           title: title.trim(),
           body: body.trim(),
           ...(imageUrl.trim() ? { imageUrl: imageUrl.trim() } : {}),
           audience,
-          recipients: 0,
+          recipients: successful,
           sentAt: Timestamp.now(),
           ...(linkType !== 'none' ? { linkType } : {}),
           ...(linkType === 'event' && selectedEventId ? { selectedEventId } : {}),
@@ -161,10 +124,7 @@ export default function NotificationsPage() {
         setSelectedSignUpSlug('')
         loadHistory()
       } else {
-        const errMsg = Array.isArray(data.errors)
-          ? data.errors.join(', ')
-          : data.errors ?? data.error ?? `HTTP ${res.status}`
-        setResult({ success: false, message: errMsg })
+        setResult({ success: false, message: json.error ?? `HTTP ${res.status}` })
       }
     } catch (err) {
       setResult({ success: false, message: err instanceof Error ? err.message : 'Network error' })
@@ -194,7 +154,7 @@ export default function NotificationsPage() {
     <div className="flex flex-col min-h-screen" style={{ background: '#f5f5f7' }}>
       <div className="px-8 py-5" style={{ borderBottom: '1px solid #f0f0f2', background: '#f5f5f7' }}>
         <h1 className="text-base font-bold text-gray-900">Push Notifications</h1>
-        <p className="text-xs mt-0.5" style={{ color: '#6e6e73' }}>Send to app subscribers via OneSignal</p>
+        <p className="text-xs mt-0.5" style={{ color: '#6e6e73' }}>Send directly to app subscribers via APNs</p>
       </div>
 
       <div className="p-8 grid grid-cols-2 gap-8 items-start">
