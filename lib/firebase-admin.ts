@@ -12,6 +12,11 @@ function getAdminApp() {
   })
 }
 
+function getDb() {
+  return getFirestore(getAdminApp())
+}
+
 export const db = {
-  collection: (name: string) => getFirestore(getAdminApp()).collection(name),
+  collection: (name: string) => getDb().collection(name),
+  batch: () => getDb().batch(),
 }

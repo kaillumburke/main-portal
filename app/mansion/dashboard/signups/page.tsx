@@ -28,6 +28,15 @@ interface SignUpLink {
   submissionCount: number
   scheduledStartAt?: Timestamp
   scheduledEndAt?: Timestamp
+  senderName?: string
+  emailSubject?: string
+  emailBody?: string
+  followUp1Subject?: string
+  followUp1Body?: string
+  followUp1SendAt?: Timestamp
+  followUp2Subject?: string
+  followUp2Body?: string
+  followUp2SendAt?: Timestamp
 }
 
 interface Submission {
@@ -85,6 +94,15 @@ const emptyForm = {
   active: true,
   scheduledStartAt: '',
   scheduledEndAt: '',
+  senderName: '',
+  emailSubject: '',
+  emailBody: '',
+  followUp1Subject: '',
+  followUp1Body: '',
+  followUp1SendAt: '',
+  followUp2Subject: '',
+  followUp2Body: '',
+  followUp2SendAt: '',
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -158,7 +176,7 @@ export default function SignUpsPage() {
 
   // ─── Form helpers ────────────────────────────────────────────────────────────
 
-  const setField = (key: string, value: string | boolean) => {
+  const setField = (key: string, value: string | boolean | number) => {
     setForm(prev => {
       const updated = { ...prev, [key]: value }
       if (key === 'title' && !slugManual) {
@@ -200,6 +218,15 @@ export default function SignUpsPage() {
       active: link.active,
       scheduledStartAt: link.scheduledStartAt ? new Date(link.scheduledStartAt.seconds * 1000).toISOString().slice(0, 16) : '',
       scheduledEndAt: link.scheduledEndAt ? new Date(link.scheduledEndAt.seconds * 1000).toISOString().slice(0, 16) : '',
+      senderName: link.senderName ?? '',
+      emailSubject: link.emailSubject ?? '',
+      emailBody: link.emailBody ?? '',
+      followUp1Subject: link.followUp1Subject ?? '',
+      followUp1Body: link.followUp1Body ?? '',
+      followUp1SendAt: link.followUp1SendAt ? new Date(link.followUp1SendAt.seconds * 1000).toISOString().slice(0, 16) : '',
+      followUp2Subject: link.followUp2Subject ?? '',
+      followUp2Body: link.followUp2Body ?? '',
+      followUp2SendAt: link.followUp2SendAt ? new Date(link.followUp2SendAt.seconds * 1000).toISOString().slice(0, 16) : '',
     })
     setSlugManual(true)
     setMainImagePreview(link.mainImageURL ?? null)
@@ -248,6 +275,15 @@ export default function SignUpsPage() {
         active: form.active,
         scheduledStartAt: form.scheduledStartAt ? Timestamp.fromDate(new Date(form.scheduledStartAt)) : null,
         scheduledEndAt: form.scheduledEndAt ? Timestamp.fromDate(new Date(form.scheduledEndAt)) : null,
+        senderName: form.senderName,
+        emailSubject: form.emailSubject,
+        emailBody: form.emailBody,
+        followUp1Subject: form.followUp1Subject,
+        followUp1Body: form.followUp1Body,
+        followUp1SendAt: form.followUp1SendAt ? Timestamp.fromDate(new Date(form.followUp1SendAt)) : null,
+        followUp2Subject: form.followUp2Subject,
+        followUp2Body: form.followUp2Body,
+        followUp2SendAt: form.followUp2SendAt ? Timestamp.fromDate(new Date(form.followUp2SendAt)) : null,
       }
 
       if (editingId) {
@@ -557,6 +593,138 @@ export default function SignUpsPage() {
                     className="w-full rounded-lg px-3 py-2 text-xs text-gray-900 outline-none"
                     style={{ background: '#ffffff', border: '1px solid #e5e5ea' }}
                   />
+                </div>
+
+                {/* Email section */}
+                <div className="col-span-2 rounded-2xl p-5 flex flex-col gap-5" style={{ background: '#1c1c1e' }}>
+                  <div className="pb-2" style={{ borderBottom: '1px solid #3a3a3c' }}>
+                    <span className="text-[11px] uppercase tracking-widest font-bold" style={{ color: '#ffffff' }}>Emails</span>
+                  </div>
+
+                  {/* Sender name */}
+                  <div>
+                    <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#8e8e93' }}>Sender name</label>
+                    <p className="text-[10px] mb-1.5" style={{ color: '#636366' }}>Displayed as the &quot;From&quot; name in the customer&apos;s inbox (e.g. Mansion Liverpool).</p>
+                    <input
+                      type="text"
+                      value={form.senderName}
+                      onChange={e => setField('senderName', e.target.value)}
+                      placeholder="e.g. Mansion Liverpool"
+                      className="w-full rounded-lg px-3 py-2 text-xs outline-none"
+                      style={{ background: '#2c2c2e', border: '1px solid #3a3a3c', color: '#ffffff' }}
+                    />
+                  </div>
+
+                  {/* Confirmation email */}
+                  <div className="flex flex-col gap-3 p-4 rounded-xl" style={{ background: '#2c2c2e' }}>
+                    <div>
+                      <span className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: '#ffffff' }}>Confirmation email</span>
+                      <p className="text-[10px] mt-0.5" style={{ color: '#8e8e93' }}>Sent instantly when someone signs up. Leave subject blank to skip.</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#8e8e93' }}>Subject</label>
+                      <input
+                        type="text"
+                        value={form.emailSubject}
+                        onChange={e => setField('emailSubject', e.target.value)}
+                        placeholder="e.g. You're on the list 🎉"
+                        className="w-full rounded-lg px-3 py-2 text-xs outline-none"
+                        style={{ background: '#3a3a3c', border: '1px solid #48484a', color: '#ffffff' }}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#8e8e93' }}>Message</label>
+                      <p className="text-[10px] mb-1.5" style={{ color: '#636366' }}>Use {'{{name}}'} for the customer&apos;s name.</p>
+                      <textarea
+                        value={form.emailBody}
+                        onChange={e => setField('emailBody', e.target.value)}
+                        placeholder={"Hi {{name}},\n\nThanks for signing up! We'll be in touch soon.\n\nMansion Liverpool"}
+                        rows={5}
+                        className="w-full rounded-lg px-3 py-2 text-xs outline-none resize-none"
+                        style={{ background: '#3a3a3c', border: '1px solid #48484a', color: '#ffffff', fontFamily: 'inherit' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Follow-up 1 */}
+                  <div className="flex flex-col gap-3 p-4 rounded-xl" style={{ background: '#2c2c2e' }}>
+                    <div>
+                      <span className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: '#ffffff' }}>Follow-up email 1</span>
+                      <p className="text-[10px] mt-0.5" style={{ color: '#8e8e93' }}>Sent automatically after the delay below. Leave subject blank to skip.</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#8e8e93' }}>Send date & time</label>
+                      <input
+                        type="datetime-local"
+                        value={form.followUp1SendAt}
+                        onChange={e => setField('followUp1SendAt', e.target.value)}
+                        className="rounded-lg px-3 py-2 text-xs outline-none"
+                        style={{ background: '#3a3a3c', border: '1px solid #48484a', color: '#ffffff', colorScheme: 'dark' }}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#8e8e93' }}>Subject</label>
+                      <input
+                        type="text"
+                        value={form.followUp1Subject}
+                        onChange={e => setField('followUp1Subject', e.target.value)}
+                        placeholder="e.g. A reminder from us 👀"
+                        className="w-full rounded-lg px-3 py-2 text-xs outline-none"
+                        style={{ background: '#3a3a3c', border: '1px solid #48484a', color: '#ffffff' }}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#8e8e93' }}>Message</label>
+                      <textarea
+                        value={form.followUp1Body}
+                        onChange={e => setField('followUp1Body', e.target.value)}
+                        placeholder={"Hi {{name}},\n\nJust a quick follow up..."}
+                        rows={5}
+                        className="w-full rounded-lg px-3 py-2 text-xs outline-none resize-none"
+                        style={{ background: '#3a3a3c', border: '1px solid #48484a', color: '#ffffff', fontFamily: 'inherit' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Follow-up 2 */}
+                  <div className="flex flex-col gap-3 p-4 rounded-xl" style={{ background: '#2c2c2e' }}>
+                    <div>
+                      <span className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: '#ffffff' }}>Follow-up email 2</span>
+                      <p className="text-[10px] mt-0.5" style={{ color: '#8e8e93' }}>Sent automatically after the delay below. Leave subject blank to skip.</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#8e8e93' }}>Send date & time</label>
+                      <input
+                        type="datetime-local"
+                        value={form.followUp2SendAt}
+                        onChange={e => setField('followUp2SendAt', e.target.value)}
+                        className="rounded-lg px-3 py-2 text-xs outline-none"
+                        style={{ background: '#3a3a3c', border: '1px solid #48484a', color: '#ffffff', colorScheme: 'dark' }}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#8e8e93' }}>Subject</label>
+                      <input
+                        type="text"
+                        value={form.followUp2Subject}
+                        onChange={e => setField('followUp2Subject', e.target.value)}
+                        placeholder="e.g. Last chance to confirm 🔥"
+                        className="w-full rounded-lg px-3 py-2 text-xs outline-none"
+                        style={{ background: '#3a3a3c', border: '1px solid #48484a', color: '#ffffff' }}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#8e8e93' }}>Message</label>
+                      <textarea
+                        value={form.followUp2Body}
+                        onChange={e => setField('followUp2Body', e.target.value)}
+                        placeholder={"Hi {{name}},\n\nOne last reminder..."}
+                        rows={5}
+                        className="w-full rounded-lg px-3 py-2 text-xs outline-none resize-none"
+                        style={{ background: '#3a3a3c', border: '1px solid #48484a', color: '#ffffff', fontFamily: 'inherit' }}
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Active toggle */}
