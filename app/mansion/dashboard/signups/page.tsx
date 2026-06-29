@@ -682,7 +682,7 @@ function EmailBuilder({ label, subLabel, config, onChange, showSendAt, uploadImg
             {config.enabled && (
               <button onClick={() => setOpen(true)}
                 className="px-3 py-1.5 rounded-lg text-xs font-medium"
-                style={{ background: '#f0f0f2', color: '#111111', border: '1px solid #e5e5ea' }}>
+                style={{ background: '#111', color: '#fff', border: '1px solid #111' }}>
                 ✏ Edit email
               </button>
             )}
