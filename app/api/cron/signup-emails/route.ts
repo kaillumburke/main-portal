@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { serverDb } from '@/lib/firebase-server'
 import { collection, query, where, getDocs, updateDoc, Timestamp } from 'firebase/firestore'
-import type { EmailConfig } from '@/app/mansion/dashboard/signups/page'
-import { generateEmailHTML } from '@/app/mansion/dashboard/signups/page'
+import type { EmailConfig } from '@/lib/email-builder'
+import { generateEmailHTML } from '@/lib/email-builder'
 
 function legacyHtml(bodyText: string, senderName: string) {
   const lines = bodyText.split('\n')

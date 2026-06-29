@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { serverDb } from '@/lib/firebase-server'
 import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore'
-import type { EmailConfig } from '@/app/mansion/dashboard/signups/page'
-import { generateEmailHTML } from '@/app/mansion/dashboard/signups/page'
+import type { EmailConfig } from '@/lib/email-builder'
+import { generateEmailHTML } from '@/lib/email-builder'
 
 export async function POST(req: NextRequest) {
   const resend = new Resend(process.env.RESEND_API_KEY!)
