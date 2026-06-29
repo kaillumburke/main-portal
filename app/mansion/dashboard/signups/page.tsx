@@ -561,7 +561,7 @@ export default function SignUpsPage() {
     subject: string | undefined,
     body: string | undefined,
     sendAt?: Timestamp,
-  ): EmailConfig => ({
+  ): EmailConfig & { sendAt: string } => ({
     ...emptyEmailConfig,
     enabled: !!(subject?.trim()),
     subject: subject ?? '',
@@ -585,9 +585,9 @@ export default function SignUpsPage() {
       scheduledStartAt: link.scheduledStartAt ? new Date(link.scheduledStartAt.seconds * 1000).toISOString().slice(0, 16) : '',
       scheduledEndAt: link.scheduledEndAt ? new Date(link.scheduledEndAt.seconds * 1000).toISOString().slice(0, 16) : '',
       senderName: link.senderName ?? '',
-      confirmationEmail: link.confirmationEmail ?? emailFromLegacy(link.emailSubject, link.emailBody),
-      followUp1: link.followUp1 ?? emailFromLegacy(link.followUp1Subject, link.followUp1Body, link.followUp1SendAt),
-      followUp2: link.followUp2 ?? emailFromLegacy(link.followUp2Subject, link.followUp2Body, link.followUp2SendAt),
+      confirmationEmail: { ...emptyEmailConfig, ...(link.confirmationEmail ?? emailFromLegacy(link.emailSubject, link.emailBody)) },
+      followUp1: { ...emptyEmailConfig, sendAt: '', ...(link.followUp1 ?? emailFromLegacy(link.followUp1Subject, link.followUp1Body, link.followUp1SendAt)) },
+      followUp2: { ...emptyEmailConfig, sendAt: '', ...(link.followUp2 ?? emailFromLegacy(link.followUp2Subject, link.followUp2Body, link.followUp2SendAt)) },
     })
     setSlugManual(true)
     setMainImagePreview(link.mainImageURL ?? null)
@@ -893,7 +893,7 @@ export default function SignUpsPage() {
                   label="Follow-up email 1"
                   subLabel="Sent automatically at your chosen date & time"
                   config={form.followUp1}
-                  onChange={cfg => setForm(p => ({ ...p, followUp1: cfg }))}
+                  onChange={cfg => setForm(p => ({ ...p, followUp1: { ...emptyEmailConfig, sendAt: '', ...cfg } }))}
                   showSendAt
                   uploadImage={uploadEmailImage}
                 />
@@ -903,7 +903,7 @@ export default function SignUpsPage() {
                   label="Follow-up email 2"
                   subLabel="Sent automatically at your chosen date & time"
                   config={form.followUp2}
-                  onChange={cfg => setForm(p => ({ ...p, followUp2: cfg }))}
+                  onChange={cfg => setForm(p => ({ ...p, followUp2: { ...emptyEmailConfig, sendAt: '', ...cfg } }))}
                   showSendAt
                   uploadImage={uploadEmailImage}
                 />
