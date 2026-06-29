@@ -1,8 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { collection, getDocs, addDoc, orderBy, query, Timestamp } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
+import { db, storage } from '@/lib/firebase'
+
+const APP_ICON_URL = 'https://mansion-nightclub-portal.vercel.app/app-icon.png'
 
 const audiences = [
   { value: 'everyone', label: 'Everyone', desc: 'All subscribers' },
@@ -36,6 +39,9 @@ export default function NotificationsPage() {
   const [signUps, setSignUps] = useState<SignUpOption[]>([])
   const [selectedEventId, setSelectedEventId] = useState('')
   const [selectedSignUpSlug, setSelectedSignUpSlug] = useState('')
+  const [imgUploading, setImgUploading] = useState(false)
+  const [imgDragOver, setImgDragOver] = useState(false)
+  const imgInputRef = useRef<HTMLInputElement>(null)
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
   const [history, setHistory] = useState<SentNotification[]>([])
@@ -66,50 +72,97 @@ export default function NotificationsPage() {
     )
   }
 
+  const uploadImage = useCallback(async (file: File) => {
+    setImgUploading(true)
+    try {
+      const storageRef = ref(storage, `notification-images/${Date.now()}-${file.name}`)
+      const task = uploadBytesResumable(storageRef, file)
+      const url: string = await new Promise((resolve, reject) => {
+        task.on('state_changed', () => {}, reject, async () => resolve(await getDownloadURL(task.snapshot.ref)))
+      })
+      setImageUrl(url)
+    } finally {
+      setImgUploading(false)
+    }
+  }, [])
+
+  const handleImgDrop = (e: React.DragEvent) => {
+    e.preventDefault(); setImgDragOver(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file && file.type.startsWith('image/')) uploadImage(file)
+  }
+
   const send = async () => {
     if (!title.trim() || !body.trim()) return
     setSending(true)
     setResult(null)
 
-    const data: Record<string, unknown> = {}
+    const payload: Record<string, unknown> = {
+      headings: { en: title },
+      contents: { en: body },
+      large_icon: APP_ICON_URL,
+      chrome_web_icon: APP_ICON_URL,
+      apns_env: 'production',
+    }
+
+    if (imageUrl.trim()) {
+      payload.big_picture = imageUrl.trim()
+      payload.ios_attachments = { id1: imageUrl.trim() }
+    }
+
     if (linkType === 'event' && selectedEventId) {
-      data.type = 'event'
-      data.id = selectedEventId
+      payload.url = `mansion://events/${selectedEventId}`
+      payload.data = { type: 'event', id: selectedEventId }
     } else if (linkType === 'signup' && selectedSignUpSlug) {
-      data.type = 'signup'
-      data.slug = selectedSignUpSlug
+      payload.url = `mansion://signups/${selectedSignUpSlug}`
+      payload.data = { type: 'signup', slug: selectedSignUpSlug }
+    }
+
+    if (audience === 'everyone') {
+      const subSnap = await getDocs(collection(db, 'push_subscriptions'))
+      const ids = subSnap.docs.map(d => d.data().subscriptionId as string).filter(Boolean)
+      if (ids.length > 0) {
+        payload.include_subscription_ids = ids
+      } else {
+        payload.included_segments = ['All']
+      }
+    } else if (audience === 'ticketHolders') {
+      payload.filters = [{ field: 'tag', key: 'has_ticket', relation: '=', value: 'true' }]
+    } else if (audience === 'vipOnly') {
+      payload.filters = [{ field: 'tag', key: 'tier', relation: '=', value: 'vip' }]
     }
 
     try {
-      const res = await fetch('/api/notifications/send', {
+      const res = await fetch('/api/send-notification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim(),
-          body: body.trim(),
-          audience,
-          ...(imageUrl.trim() ? { imageUrl: imageUrl.trim() } : {}),
-          ...(Object.keys(data).length ? { data } : {}),
-        }),
+        body: JSON.stringify(payload),
       })
-      const json = await res.json()
-      if (res.ok) {
-        const { successful, total, errors } = json
-        setResult({
-          success: successful > 0 || total === 0,
-          message: total === 0
-            ? 'No registered devices yet — open the app on each phone first'
-            : successful > 0
-              ? `Delivered to ${successful} of ${total} device${total !== 1 ? 's' : ''}${errors?.length ? ` (${errors.join(', ')})` : ''}`
-              : `Failed — ${errors?.join(', ') ?? 'unknown error'}`,
-        })
+      const data = await res.json()
+      if (res.ok && data.id) {
+        setResult({ success: true, message: 'Notification queued — checking delivery…' })
+        setTimeout(async () => {
+          try {
+            const check = await fetch(`/api/send-notification?id=${data.id}`)
+            const r = await check.json()
+            const successful = r.successful ?? 0
+            const errored = r.errored ?? 0
+            setResult({ success: true, message: successful > 0
+              ? `Delivered to ${successful} device${successful !== 1 ? 's' : ''}${errored > 0 ? ` (${errored} unreachable)` : ''}`
+              : errored > 0
+                ? `Queued — ${errored} device${errored !== 1 ? 's' : ''} currently unreachable (notifications may be disabled)`
+                : 'Sent successfully'
+            })
+          } catch { /* leave original message */ }
+        }, 5000)
 
+        // Save to Firestore
         await addDoc(collection(db, 'sent_notifications'), {
           title: title.trim(),
           body: body.trim(),
           ...(imageUrl.trim() ? { imageUrl: imageUrl.trim() } : {}),
           audience,
-          recipients: successful,
+          recipients: 0,
           sentAt: Timestamp.now(),
           ...(linkType !== 'none' ? { linkType } : {}),
           ...(linkType === 'event' && selectedEventId ? { selectedEventId } : {}),
@@ -124,7 +177,10 @@ export default function NotificationsPage() {
         setSelectedSignUpSlug('')
         loadHistory()
       } else {
-        setResult({ success: false, message: json.error ?? `HTTP ${res.status}` })
+        const errMsg = Array.isArray(data.errors)
+          ? data.errors.join(', ')
+          : data.errors ?? data.error ?? `HTTP ${res.status}`
+        setResult({ success: false, message: errMsg })
       }
     } catch (err) {
       setResult({ success: false, message: err instanceof Error ? err.message : 'Network error' })
@@ -154,7 +210,7 @@ export default function NotificationsPage() {
     <div className="flex flex-col min-h-screen" style={{ background: '#f5f5f7' }}>
       <div className="px-8 py-5" style={{ borderBottom: '1px solid #f0f0f2', background: '#f5f5f7' }}>
         <h1 className="text-base font-bold text-gray-900">Push Notifications</h1>
-        <p className="text-xs mt-0.5" style={{ color: '#6e6e73' }}>Send directly to app subscribers via APNs</p>
+        <p className="text-xs mt-0.5" style={{ color: '#6e6e73' }}>Send to app subscribers via OneSignal</p>
       </div>
 
       <div className="p-8 grid grid-cols-2 gap-8 items-start">
@@ -170,12 +226,12 @@ export default function NotificationsPage() {
                 <label key={a.value}
                   className="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all"
                   style={{
-                    background: audience === a.value ? '#1a1400' : '#1a1a1a',
-                    border: `1px solid ${audience === a.value ? '#C9A84C' : '#2a2a2a'}`,
+                    background: audience === a.value ? '#f5f5f7' : '#fafafa',
+                    border: `1.5px solid ${audience === a.value ? '#111' : '#e5e5ea'}`,
                   }}>
                   <input type="radio" name="audience" value={a.value}
                     checked={audience === a.value} onChange={() => setAudience(a.value)}
-                    className="accent-yellow-500" />
+                    className="accent-gray-900" />
                   <div>
                     <div className="text-xs font-medium text-gray-900">{a.label}</div>
                     <div className="text-[10px]" style={{ color: '#6e6e73' }}>{a.desc}</div>
@@ -205,14 +261,41 @@ export default function NotificationsPage() {
             <div className="text-right text-[10px] mt-1" style={{ color: '#6e6e73' }}>{body.length}/180</div>
           </div>
 
-          {/* Image URL */}
+          {/* Image drop zone */}
           <div>
-            <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#6e6e73' }}>Image URL <span style={{ color: '#aaa', textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
-            <input type="url" placeholder="https://example.com/image.jpg"
-              value={imageUrl} onChange={e => setImageUrl(e.target.value)}
-              className="w-full rounded-lg px-3 py-2.5 text-xs text-gray-900 outline-none"
-              style={{ background: '#f0f0f2', border: '1px solid #e5e5ea' }} />
-            <div className="text-[10px] mt-1" style={{ color: '#aaa' }}>Shown as a banner image on iOS &amp; Android</div>
+            <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#6e6e73' }}>Image <span style={{ color: '#aaa', textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
+            <input ref={imgInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+              onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f) }} />
+            {imageUrl ? (
+              <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid #e5e5ea' }}>
+                <img src={imageUrl} alt="" style={{ width: '100%', maxHeight: 140, objectFit: 'cover', display: 'block' }} />
+                <button onClick={() => setImageUrl('')}
+                  style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: 20, width: 22, height: 22, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>✕</button>
+              </div>
+            ) : (
+              <div
+                onClick={() => imgInputRef.current?.click()}
+                onDragOver={e => { e.preventDefault(); setImgDragOver(true) }}
+                onDragLeave={() => setImgDragOver(false)}
+                onDrop={handleImgDrop}
+                style={{
+                  border: `2px dashed ${imgDragOver ? '#111' : '#d0d0d5'}`,
+                  borderRadius: 10, padding: '20px 16px', textAlign: 'center',
+                  cursor: imgUploading ? 'wait' : 'pointer',
+                  background: imgDragOver ? '#f5f5f7' : '#fafafa',
+                  transition: 'all 0.15s',
+                }}>
+                {imgUploading ? (
+                  <div className="text-xs" style={{ color: '#6e6e73' }}>Uploading…</div>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 22, marginBottom: 4 }}>🖼</div>
+                    <div className="text-xs font-medium" style={{ color: '#111' }}>Drop image here or click to upload</div>
+                    <div className="text-[10px] mt-1" style={{ color: '#aaa' }}>Shown as banner on iOS &amp; Android</div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Deep Link */}
@@ -273,7 +356,7 @@ export default function NotificationsPage() {
           {/* Result */}
           {result && (
             <div className="rounded-lg px-4 py-3 text-xs"
-              style={{ background: result.success ? '#0a2010' : '#2e0f0f', color: result.success ? '#4ade80' : '#f87171' }}>
+              style={{ background: result.success ? '#f0fdf4' : '#fef2f2', color: result.success ? '#16a34a' : '#dc2626', border: `1px solid ${result.success ? '#bbf7d0' : '#fecaca'}` }}>
               {result.success ? '✓ ' : '✕ '}{result.message}
             </div>
           )}
@@ -298,7 +381,7 @@ export default function NotificationsPage() {
             <div style={{ background: '#f5f5f7' }}>
               {history.map((n, i) => (
                 <div key={n.id} className="px-5 py-4 flex items-start gap-3"
-                  style={{ borderBottom: i < history.length - 1 ? '1px solid #141414' : 'none' }}>
+                  style={{ borderBottom: i < history.length - 1 ? '1px solid #f0f0f2' : 'none', background: '#fff' }}>
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: '#fef9ee' }}>
                     <span className="text-[10px] font-black" style={{ color: '#111111' }}>M</span>
                   </div>
