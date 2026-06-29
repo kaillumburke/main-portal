@@ -432,167 +432,89 @@ export default function SignUpsPage() {
               <button onClick={closeForm} className="text-xs" style={{ color: '#6e6e73' }}>✕</button>
             </div>
 
-            <div className="p-6" style={{ background: '#f5f5f7' }}>
-              <div className="grid grid-cols-2 gap-4">
+            <div className="p-6 flex flex-col gap-4" style={{ background: '#111113' }}>
 
-                {/* Title */}
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#6e6e73' }}>Title</label>
-                  <input
-                    type="text"
-                    value={form.title}
-                    onChange={e => setField('title', e.target.value)}
-                    placeholder="e.g. Mansion Saturday Nights"
-                    className="w-full rounded-lg px-3 py-2 text-xs text-gray-900 outline-none"
-                    style={{ background: '#ffffff', border: '1px solid #e5e5ea' }}
-                  />
-                </div>
-
-                {/* Slug */}
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#6e6e73' }}>Slug</label>
-                  <input
-                    type="text"
-                    value={form.slug}
-                    onChange={e => { setSlugManual(true); setField('slug', slugify(e.target.value)) }}
-                    placeholder="auto-generated"
-                    className="w-full rounded-lg px-3 py-2 text-xs text-gray-900 outline-none font-mono"
-                    style={{ background: '#ffffff', border: '1px solid #e5e5ea' }}
-                  />
-                  {form.slug && (
-                    <p className="text-[10px] mt-1" style={{ color: '#6e6e73' }}>
-                      {PUBLIC_BASE}/s/{form.slug}
-                    </p>
-                  )}
-                </div>
-
-                {/* Description */}
-                <div className="col-span-2">
-                  <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#6e6e73' }}>Description</label>
-                  <textarea
-                    value={form.description}
-                    onChange={e => setField('description', e.target.value)}
-                    rows={2}
-                    placeholder="Short description shown on the sign up page"
-                    className="w-full rounded-lg px-3 py-2 text-xs text-gray-900 outline-none resize-none"
-                    style={{ background: '#ffffff', border: '1px solid #e5e5ea' }}
-                  />
-                </div>
-
-                {/* Images */}
-                <ImagePicker
-                  label="Main Image"
-                  file={mainImageFile}
-                  preview={mainImagePreview}
-                  inputRef={mainImageRef}
-                  progressKey="main"
-                  onFile={f => { setMainImageFile(f); setMainImagePreview(URL.createObjectURL(f)) }}
-                  onClear={() => { setMainImageFile(null); setMainImagePreview(null); setForm(p => ({ ...p, mainImageURL: '' })) }}
-                />
-                <ImagePicker
-                  label="Background Image"
-                  file={bgImageFile}
-                  preview={bgImagePreview}
-                  inputRef={bgImageRef}
-                  progressKey="bg"
-                  onFile={f => { setBgImageFile(f); setBgImagePreview(URL.createObjectURL(f)) }}
-                  onClear={() => { setBgImageFile(null); setBgImagePreview(null); setForm(p => ({ ...p, backgroundImageURL: '' })) }}
-                />
-
-                {/* Colors */}
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#6e6e73' }}>Background Color</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={form.backgroundColorHex}
-                      onChange={e => setField('backgroundColorHex', e.target.value)}
-                      className="w-8 h-8 rounded cursor-pointer border-0"
-                      style={{ padding: 2 }}
-                    />
-                    <input
-                      type="text"
-                      value={form.backgroundColorHex}
-                      onChange={e => setField('backgroundColorHex', e.target.value)}
-                      className="flex-1 rounded-lg px-3 py-2 text-xs text-gray-900 outline-none font-mono"
-                      style={{ background: '#ffffff', border: '1px solid #e5e5ea' }}
-                    />
+                {/* Basic Info */}
+                <div className="rounded-2xl p-5 flex flex-col gap-4" style={{ background: '#1c1c1e' }}>
+                  <div className="pb-2" style={{ borderBottom: '1px solid #3a3a3c' }}>
+                    <span className="text-[11px] uppercase tracking-widest font-bold" style={{ color: '#ffffff' }}>Basic Info</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#8e8e93' }}>Title</label>
+                      <input type="text" value={form.title} onChange={e => setField('title', e.target.value)} placeholder="e.g. Mansion Saturday Nights" className="w-full rounded-lg px-3 py-2 text-xs outline-none" style={{ background: '#2c2c2e', border: '1px solid #3a3a3c', color: '#ffffff' }} />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#8e8e93' }}>Slug</label>
+                      <input type="text" value={form.slug} onChange={e => { setSlugManual(true); setField('slug', slugify(e.target.value)) }} placeholder="auto-generated" className="w-full rounded-lg px-3 py-2 text-xs outline-none font-mono" style={{ background: '#2c2c2e', border: '1px solid #3a3a3c', color: '#ffffff' }} />
+                      {form.slug && <p className="text-[10px] mt-1" style={{ color: '#636366' }}>{PUBLIC_BASE}/s/{form.slug}</p>}
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#8e8e93' }}>Description</label>
+                      <textarea value={form.description} onChange={e => setField('description', e.target.value)} rows={2} placeholder="Short description shown on the sign up page" className="w-full rounded-lg px-3 py-2 text-xs outline-none resize-none" style={{ background: '#2c2c2e', border: '1px solid #3a3a3c', color: '#ffffff', fontFamily: 'inherit' }} />
+                    </div>
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#6e6e73' }}>Text Color</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={form.textColorHex}
-                      onChange={e => setField('textColorHex', e.target.value)}
-                      className="w-8 h-8 rounded cursor-pointer border-0"
-                      style={{ padding: 2 }}
-                    />
-                    <input
-                      type="text"
-                      value={form.textColorHex}
-                      onChange={e => setField('textColorHex', e.target.value)}
-                      className="flex-1 rounded-lg px-3 py-2 text-xs text-gray-900 outline-none font-mono"
-                      style={{ background: '#ffffff', border: '1px solid #e5e5ea' }}
-                    />
+                {/* Appearance */}
+                <div className="rounded-2xl p-5 flex flex-col gap-4" style={{ background: '#1c1c1e' }}>
+                  <div className="pb-2" style={{ borderBottom: '1px solid #3a3a3c' }}>
+                    <span className="text-[11px] uppercase tracking-widest font-bold" style={{ color: '#ffffff' }}>Appearance</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <ImagePicker label="Main Image" file={mainImageFile} preview={mainImagePreview} inputRef={mainImageRef} progressKey="main" onFile={f => { setMainImageFile(f); setMainImagePreview(URL.createObjectURL(f)) }} onClear={() => { setMainImageFile(null); setMainImagePreview(null); setForm(p => ({ ...p, mainImageURL: '' })) }} />
+                    <ImagePicker label="Background Image" file={bgImageFile} preview={bgImagePreview} inputRef={bgImageRef} progressKey="bg" onFile={f => { setBgImageFile(f); setBgImagePreview(URL.createObjectURL(f)) }} onClear={() => { setBgImageFile(null); setBgImagePreview(null); setForm(p => ({ ...p, backgroundImageURL: '' })) }} />
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#8e8e93' }}>Background Color</label>
+                      <div className="flex items-center gap-2">
+                        <input type="color" value={form.backgroundColorHex} onChange={e => setField('backgroundColorHex', e.target.value)} className="w-8 h-8 rounded cursor-pointer border-0" style={{ padding: 2 }} />
+                        <input type="text" value={form.backgroundColorHex} onChange={e => setField('backgroundColorHex', e.target.value)} className="flex-1 rounded-lg px-3 py-2 text-xs outline-none font-mono" style={{ background: '#2c2c2e', border: '1px solid #3a3a3c', color: '#ffffff' }} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#8e8e93' }}>Text Color</label>
+                      <div className="flex items-center gap-2">
+                        <input type="color" value={form.textColorHex} onChange={e => setField('textColorHex', e.target.value)} className="w-8 h-8 rounded cursor-pointer border-0" style={{ padding: 2 }} />
+                        <input type="text" value={form.textColorHex} onChange={e => setField('textColorHex', e.target.value)} className="flex-1 rounded-lg px-3 py-2 text-xs outline-none font-mono" style={{ background: '#2c2c2e', border: '1px solid #3a3a3c', color: '#ffffff' }} />
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#8e8e93' }}>Font</label>
+                      <div className="flex gap-2">
+                        {(['sans-serif', 'serif', 'display'] as FontFamily[]).map(f => (
+                          <button key={f} type="button" onClick={() => setField('fontFamily', f)} className="px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all" style={{ background: form.fontFamily === f ? '#ffffff' : '#2c2c2e', color: form.fontFamily === f ? '#111111' : '#8e8e93', border: `1px solid ${form.fontFamily === f ? '#ffffff' : '#3a3a3c'}` }}>{f}</button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Font family */}
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#6e6e73' }}>Font</label>
-                  <div className="flex gap-2">
-                    {(['sans-serif', 'serif', 'display'] as FontFamily[]).map(f => (
-                      <button
-                        key={f}
-                        type="button"
-                        onClick={() => setField('fontFamily', f)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all"
-                        style={{
-                          background: form.fontFamily === f ? '#111111' : '#f0f0f2',
-                          color: form.fontFamily === f ? '#ffffff' : '#6e6e73',
-                          border: `1px solid ${form.fontFamily === f ? '#111111' : '#e5e5ea'}`,
-                        }}>
-                        {f}
+                {/* Settings */}
+                <div className="rounded-2xl p-5 flex flex-col gap-4" style={{ background: '#1c1c1e' }}>
+                  <div className="pb-2" style={{ borderBottom: '1px solid #3a3a3c' }}>
+                    <span className="text-[11px] uppercase tracking-widest font-bold" style={{ color: '#ffffff' }}>Settings</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                      <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#8e8e93' }}>App Store URL</label>
+                      <input type="url" value={form.appStoreURL} onChange={e => setField('appStoreURL', e.target.value)} className="w-full rounded-lg px-3 py-2 text-xs outline-none" style={{ background: '#2c2c2e', border: '1px solid #3a3a3c', color: '#ffffff' }} />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#8e8e93' }}>Go Live At (optional)</label>
+                      <input type="datetime-local" value={form.scheduledStartAt} onChange={e => setField('scheduledStartAt', e.target.value)} className="w-full rounded-lg px-3 py-2 text-xs outline-none" style={{ background: '#2c2c2e', border: '1px solid #3a3a3c', color: '#ffffff', colorScheme: 'dark' }} />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#8e8e93' }}>End At (optional)</label>
+                      <input type="datetime-local" value={form.scheduledEndAt} onChange={e => setField('scheduledEndAt', e.target.value)} className="w-full rounded-lg px-3 py-2 text-xs outline-none" style={{ background: '#2c2c2e', border: '1px solid #3a3a3c', color: '#ffffff', colorScheme: 'dark' }} />
+                    </div>
+                    <div className="col-span-2 flex items-center gap-3">
+                      <span className="text-[10px] uppercase tracking-widest" style={{ color: '#8e8e93' }}>Active</span>
+                      <button type="button" onClick={() => setField('active', !form.active)} className="w-10 h-6 rounded-full transition-all relative flex-shrink-0" style={{ background: form.active ? '#ffffff' : '#3a3a3c' }}>
+                        <div className="w-4 h-4 rounded-full absolute top-1 transition-all" style={{ background: form.active ? '#111111' : '#8e8e93', left: form.active ? 22 : 4 }} />
                       </button>
-                    ))}
+                      <span className="text-xs" style={{ color: '#8e8e93' }}>{form.active ? 'Link is accepting submissions' : 'Link is paused'}</span>
+                    </div>
                   </div>
-                </div>
-
-                {/* App Store URL */}
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#6e6e73' }}>App Store URL</label>
-                  <input
-                    type="url"
-                    value={form.appStoreURL}
-                    onChange={e => setField('appStoreURL', e.target.value)}
-                    className="w-full rounded-lg px-3 py-2 text-xs text-gray-900 outline-none"
-                    style={{ background: '#ffffff', border: '1px solid #e5e5ea' }}
-                  />
-                </div>
-
-                {/* Schedule */}
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#6e6e73' }}>Go Live At (optional)</label>
-                  <input
-                    type="datetime-local"
-                    value={form.scheduledStartAt}
-                    onChange={e => setField('scheduledStartAt', e.target.value)}
-                    className="w-full rounded-lg px-3 py-2 text-xs text-gray-900 outline-none"
-                    style={{ background: '#ffffff', border: '1px solid #e5e5ea' }}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest mb-1.5 block" style={{ color: '#6e6e73' }}>End At (optional)</label>
-                  <input
-                    type="datetime-local"
-                    value={form.scheduledEndAt}
-                    onChange={e => setField('scheduledEndAt', e.target.value)}
-                    className="w-full rounded-lg px-3 py-2 text-xs text-gray-900 outline-none"
-                    style={{ background: '#ffffff', border: '1px solid #e5e5ea' }}
-                  />
                 </div>
 
                 {/* Email section */}
@@ -727,35 +649,11 @@ export default function SignUpsPage() {
                   </div>
                 </div>
 
-                {/* Active toggle */}
-                <div className="col-span-2 flex items-center gap-3">
-                  <span className="text-[10px] uppercase tracking-widest" style={{ color: '#6e6e73' }}>Active</span>
-                  <button
-                    type="button"
-                    onClick={() => setField('active', !form.active)}
-                    className="w-10 h-6 rounded-full transition-all relative flex-shrink-0"
-                    style={{ background: form.active ? '#111111' : '#e5e5ea' }}>
-                    <div className="w-4 h-4 rounded-full bg-white absolute top-1 transition-all"
-                      style={{ left: form.active ? 22 : 4 }} />
-                  </button>
-                  <span className="text-xs" style={{ color: '#6e6e73' }}>
-                    {form.active ? 'Link is accepting submissions' : 'Link is paused'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-5">
-                <button
-                  onClick={handleSave}
-                  disabled={saving || !form.title || !form.slug}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold disabled:opacity-50"
-                  style={{ background: '#111111', color: '#fff' }}>
+              <div className="flex gap-3" style={{ paddingBottom: 4 }}>
+                <button onClick={handleSave} disabled={saving || !form.title || !form.slug} className="px-4 py-2 rounded-lg text-xs font-semibold disabled:opacity-50" style={{ background: '#ffffff', color: '#111111' }}>
                   {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Create Link'}
                 </button>
-                <button
-                  onClick={closeForm}
-                  className="px-4 py-2 rounded-lg text-xs"
-                  style={{ background: '#f0f0f2', color: '#6e6e73' }}>
+                <button onClick={closeForm} className="px-4 py-2 rounded-lg text-xs" style={{ background: '#2c2c2e', color: '#8e8e93', border: '1px solid #3a3a3c' }}>
                   Cancel
                 </button>
               </div>
