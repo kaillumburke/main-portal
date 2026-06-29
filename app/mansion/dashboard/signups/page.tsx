@@ -482,10 +482,10 @@ function EmailBuilderModal({ label, config, onChange, showSendAt, uploadImg, onC
   const selectedBlock = cfg.blocks.find(b => b.id === selectedId) ?? null
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', flexDirection: 'column', background: '#1e1e24' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', flexDirection: 'column', background: '#111111' }}>
 
       {/* Top bar */}
-      <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: '#111118', borderBottom: '1px solid #2a2a35', flexShrink: 0 }}>
+      <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: '#000000', borderBottom: '1px solid #222222', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#aaa', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>← Back</button>
           <span style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>{label}</span>
@@ -512,9 +512,9 @@ function EmailBuilderModal({ label, config, onChange, showSendAt, uploadImg, onC
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
         {/* Left sidebar */}
-        <div style={{ width: 200, background: '#16161e', borderRight: '1px solid #2a2a35', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+        <div style={{ width: 200, background: '#0a0a0a', borderRight: '1px solid #222222', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
           {/* Tabs */}
-          <div style={{ display: 'flex', borderBottom: '1px solid #2a2a35' }}>
+          <div style={{ display: 'flex', borderBottom: '1px solid #222222' }}>
             {(['blocks', 'settings'] as const).map(t => (
               <button key={t} onClick={() => setLeftTab(t)}
                 style={{ flex: 1, padding: '10px 0', background: 'none', border: 'none', borderBottom: leftTab === t ? '2px solid #111111' : '2px solid transparent', color: leftTab === t ? '#fff' : '#888', fontSize: 11, fontWeight: 600, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -530,9 +530,9 @@ function EmailBuilderModal({ label, config, onChange, showSendAt, uploadImg, onC
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                   {BLOCK_PALETTE.map(b => (
                     <button key={b.type} onClick={() => addBlock(b.type)}
-                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 4px', border: '1px solid #2a2a35', borderRadius: 8, background: '#1e1e2a', color: '#ccc', fontSize: 10, cursor: 'pointer' }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#2a2a3a'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#111111' }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#1e1e2a'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#2a2a35' }}>
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 4px', border: '1px solid #222222', borderRadius: 8, background: '#1a1a1a', color: '#ccc', fontSize: 10, cursor: 'pointer' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#2a2a2a'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#111111' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#1a1a1a'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#222222' }}>
                       <span style={{ fontSize: 20 }}>{b.icon}</span>
                       {b.label}
                     </button>
@@ -552,7 +552,7 @@ function EmailBuilderModal({ label, config, onChange, showSendAt, uploadImg, onC
                     <div style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>{f.label}</div>
                     <input type={f.type} value={(cfg as any)[f.key]} onChange={e => onChange({ ...cfg, [f.key]: e.target.value })}
                       placeholder={f.placeholder}
-                      style={{ width: '100%', background: '#1e1e2a', border: '1px solid #2a2a35', borderRadius: 6, padding: '6px 8px', fontSize: 11, color: '#fff', outline: 'none', boxSizing: 'border-box' }} />
+                      style={{ width: '100%', background: '#1a1a1a', border: '1px solid #222222', borderRadius: 6, padding: '6px 8px', fontSize: 11, color: '#fff', outline: 'none', boxSizing: 'border-box' }} />
                   </div>
                 ))}
                 {showSendAt && (
@@ -560,7 +560,7 @@ function EmailBuilderModal({ label, config, onChange, showSendAt, uploadImg, onC
                     <div style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>Send date & time</div>
                     <input type="datetime-local" value={(cfg as any).sendAt ?? ''}
                       onChange={e => onChange({ ...cfg, sendAt: e.target.value })}
-                      style={{ width: '100%', background: '#1e1e2a', border: '1px solid #2a2a35', borderRadius: 6, padding: '6px 8px', fontSize: 11, color: '#fff', outline: 'none', colorScheme: 'dark', boxSizing: 'border-box' }} />
+                      style={{ width: '100%', background: '#1a1a1a', border: '1px solid #222222', borderRadius: 6, padding: '6px 8px', fontSize: 11, color: '#fff', outline: 'none', colorScheme: 'dark', boxSizing: 'border-box' }} />
                   </div>
                 )}
                 <div style={{ fontSize: 10, color: '#666', margin: '16px 0 8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Design</div>
@@ -572,16 +572,16 @@ function EmailBuilderModal({ label, config, onChange, showSendAt, uploadImg, onC
                     <div style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>{f.label}</div>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                       <input type="color" value={(cfg as any)[f.key]} onChange={e => onChange({ ...cfg, [f.key]: e.target.value })}
-                        style={{ width: 28, height: 28, borderRadius: 4, border: '1px solid #2a2a35', padding: 1, cursor: 'pointer', flexShrink: 0, background: 'none' }} />
+                        style={{ width: 28, height: 28, borderRadius: 4, border: '1px solid #222222', padding: 1, cursor: 'pointer', flexShrink: 0, background: 'none' }} />
                       <input type="text" value={(cfg as any)[f.key]} onChange={e => onChange({ ...cfg, [f.key]: e.target.value })}
-                        style={{ flex: 1, background: '#1e1e2a', border: '1px solid #2a2a35', borderRadius: 6, padding: '5px 8px', fontSize: 11, color: '#fff', outline: 'none', fontFamily: 'monospace' }} />
+                        style={{ flex: 1, background: '#1a1a1a', border: '1px solid #222222', borderRadius: 6, padding: '5px 8px', fontSize: 11, color: '#fff', outline: 'none', fontFamily: 'monospace' }} />
                     </div>
                   </div>
                 ))}
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>Font family</div>
                   <select value={cfg.fontFamily} onChange={e => onChange({ ...cfg, fontFamily: e.target.value })}
-                    style={{ width: '100%', background: '#1e1e2a', border: '1px solid #2a2a35', borderRadius: 6, padding: '6px 8px', fontSize: 11, color: '#fff', outline: 'none' }}>
+                    style={{ width: '100%', background: '#1a1a1a', border: '1px solid #222222', borderRadius: 6, padding: '6px 8px', fontSize: 11, color: '#fff', outline: 'none' }}>
                     {['Arial', 'Georgia', 'Trebuchet MS', 'Courier New', 'Verdana'].map(f => <option key={f}>{f}</option>)}
                   </select>
                 </div>
@@ -591,7 +591,7 @@ function EmailBuilderModal({ label, config, onChange, showSendAt, uploadImg, onC
         </div>
 
         {/* Center canvas */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '32px 24px', background: '#2a2a35' }} onClick={() => setSelectedId(null)}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '32px 24px', background: '#222222' }} onClick={() => setSelectedId(null)}>
           {livePreview ? (
             <div style={{ maxWidth: preview === 'mobile' ? 390 : 660, margin: '0 auto' }}>
               <iframe
