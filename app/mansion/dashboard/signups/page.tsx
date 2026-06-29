@@ -78,7 +78,7 @@ function uid() { return Math.random().toString(36).slice(2) }
 
 function defaultBlock(type: BlockType): EmailBlock {
   switch (type) {
-    case 'header':  return { id: uid(), type, bgColor: '#111111', logoSrc: '', logoAlt: '', logoWidth: 140, align: 'center', title: 'Mansion Liverpool', subtitle: '', textColor: '#ffffff', padding: 32 }
+    case 'header':  return { id: uid(), type, bgColor: '#111111', logoSrc: '/mansion-logo.png', logoAlt: 'Mansion Liverpool', logoWidth: 140, align: 'center', title: '', subtitle: '', textColor: '#ffffff', padding: 32 }
     case 'image':   return { id: uid(), type, bgColor: '#ffffff', src: '', alt: '', link: '', width: 100, align: 'center', padding: 0, borderRadius: 0 }
     case 'text':    return { id: uid(), type, bgColor: '#ffffff', content: '<p style="margin:0 0 14px;font-size:16px;line-height:1.7;color:#111111">Hi {{name}},</p><p style="margin:0;font-size:16px;line-height:1.7;color:#111111">Thanks for signing up! We\'ll be in touch soon.</p>', fontFamily: 'Arial', padding: 32 }
     case 'button':  return { id: uid(), type, bgColor: '#ffffff', text: 'Get tickets', url: '', buttonBg: '#111111', textColor: '#ffffff', fontSize: 15, paddingV: 14, paddingH: 32, borderRadius: 8, align: 'center', fullWidth: false }
@@ -488,6 +488,7 @@ function EmailBuilderModal({ label, config, onChange, showSendAt, uploadImg, onC
       <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: '#000000', borderBottom: '1px solid #222222', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#aaa', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>← Back</button>
+          <img src="/mansion-logo.png" alt="Mansion" style={{ height: 28, width: 'auto', objectFit: 'contain', opacity: 0.9 }} />
           <span style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>{label}</span>
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
