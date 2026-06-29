@@ -226,6 +226,18 @@ function BlockInCanvas({ block, selected, total, index, onSelect, onDelete, onDu
 
 const btnStyle: React.CSSProperties = { background: 'rgba(255,255,255,0.95)', border: '1px solid #e5e5ea', borderRadius: 4, padding: '2px 6px', fontSize: 11, cursor: 'pointer', color: '#111' }
 
+// Stable module-level helpers — must NOT be defined inside components or focus is lost each keystroke
+function SettingsField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6e6e73', marginBottom: 5, fontWeight: 600 }}>{label}</div>
+      {children}
+    </div>
+  )
+}
+
+const settingsInpStyle: React.CSSProperties = { width: '100%', background: '#f5f5f7', border: '1px solid #e5e5ea', borderRadius: 6, padding: '7px 10px', fontSize: 12, color: '#111', outline: 'none', boxSizing: 'border-box' }
+
 // ─── Block settings panel ─────────────────────────────────────────────────────
 
 function BlockSettings({ block, onUpdate, uploadImg }: {
@@ -239,28 +251,21 @@ function BlockSettings({ block, onUpdate, uploadImg }: {
 
   const set = (key: string, val: unknown) => onUpdate({ ...block, [key]: val } as EmailBlock)
 
-  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6e6e73', marginBottom: 5, fontWeight: 600 }}>{label}</div>
-      {children}
-    </div>
-  )
-
   const inp = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
-    <input {...props} style={{ width: '100%', background: '#f5f5f7', border: '1px solid #e5e5ea', borderRadius: 6, padding: '7px 10px', fontSize: 12, color: '#111', outline: 'none', boxSizing: 'border-box', ...props.style }} />
+    <input {...props} style={{ ...settingsInpStyle, ...props.style }} />
   )
 
   const colorRow = (label: string, key: string) => (
-    <Field label={label}>
+    <SettingsField label={label}>
       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
         <input type="color" value={(block as any)[key]} onChange={e => set(key, e.target.value)} style={{ width: 32, height: 32, borderRadius: 6, border: '1px solid #e5e5ea', padding: 2, cursor: 'pointer', flexShrink: 0 }} />
         {inp({ type: 'text', value: (block as any)[key], onChange: e => set(key, e.target.value), style: { fontFamily: 'monospace', fontSize: 11 } })}
       </div>
-    </Field>
+    </SettingsField>
   )
 
   const alignRow = (key: string) => (
-    <Field label="Alignment">
+    <SettingsField label="Alignment">
       <div style={{ display: 'flex', gap: 4 }}>
         {(['left', 'center', 'right'] as Align[]).map(a => (
           <button key={a} onClick={() => set(key, a)}
@@ -269,11 +274,11 @@ function BlockSettings({ block, onUpdate, uploadImg }: {
           </button>
         ))}
       </div>
-    </Field>
+    </SettingsField>
   )
 
   const uploadField = (label: string, key: string, ref: React.RefObject<HTMLInputElement | null>, pathPrefix: string) => (
-    <Field label={label}>
+    <SettingsField label={label}>
       <input ref={ref} type="file" accept="image/*" style={{ display: 'none' }}
         onChange={async e => {
           const f = e.target.files?.[0]
@@ -289,16 +294,16 @@ function BlockSettings({ block, onUpdate, uploadImg }: {
         </button>
       </div>
       {(block as any)[key] && <img src={(block as any)[key]} style={{ marginTop: 8, width: '100%', borderRadius: 6, maxHeight: 80, objectFit: 'cover' }} alt="" />}
-    </Field>
+    </SettingsField>
   )
 
   const numField = (label: string, key: string, min = 0, max = 600) => (
-    <Field label={label}>
+    <SettingsField label={label}>
       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
         {inp({ type: 'number', value: (block as any)[key], min, max, onChange: e => set(key, Number(e.target.value)), style: { width: 70 } })}
         <input type="range" value={(block as any)[key]} min={min} max={max} onChange={e => set(key, Number(e.target.value))} style={{ flex: 1 }} />
       </div>
-    </Field>
+    </SettingsField>
   )
 
   if (block.type === 'header') return (
@@ -306,10 +311,10 @@ function BlockSettings({ block, onUpdate, uploadImg }: {
       {colorRow('Background', 'bgColor')}
       {colorRow('Text colour', 'textColor')}
       {uploadField('Logo image', 'logoSrc', logoRef, 'email-logos')}
-      <Field label="Logo width (px)">{inp({ type: 'number', value: block.logoWidth, min: 40, max: 400, onChange: e => set('logoWidth', Number(e.target.value)) })}</Field>
+      <SettingsField label="Logo width (px)">{inp({ type: 'number', value: block.logoWidth, min: 40, max: 400, onChange: e => set('logoWidth', Number(e.target.value)) })}</SettingsField>
       {alignRow('align')}
-      <Field label="Title">{inp({ type: 'text', value: block.title, onChange: e => set('title', e.target.value) })}</Field>
-      <Field label="Subtitle">{inp({ type: 'text', value: block.subtitle, onChange: e => set('subtitle', e.target.value) })}</Field>
+      <SettingsField label="Title">{inp({ type: 'text', value: block.title, onChange: e => set('title', e.target.value) })}</SettingsField>
+      <SettingsField label="Subtitle">{inp({ type: 'text', value: block.subtitle, onChange: e => set('subtitle', e.target.value) })}</SettingsField>
       {numField('Padding', 'padding', 8, 80)}
     </div>
   )
@@ -317,8 +322,8 @@ function BlockSettings({ block, onUpdate, uploadImg }: {
   if (block.type === 'image') return (
     <div>
       {uploadField('Image', 'src', imgRef, 'email-images')}
-      <Field label="Alt text">{inp({ type: 'text', value: block.alt, onChange: e => set('alt', e.target.value) })}</Field>
-      <Field label="Link URL">{inp({ type: 'url', value: block.link, onChange: e => set('link', e.target.value), placeholder: 'https://…' })}</Field>
+      <SettingsField label="Alt text">{inp({ type: 'text', value: block.alt, onChange: e => set('alt', e.target.value) })}</SettingsField>
+      <SettingsField label="Link URL">{inp({ type: 'url', value: block.link, onChange: e => set('link', e.target.value), placeholder: 'https://…' })}</SettingsField>
       {numField('Width (%)', 'width', 10, 100)}
       {numField('Border radius', 'borderRadius', 0, 40)}
       {numField('Padding', 'padding', 0, 60)}
@@ -329,7 +334,7 @@ function BlockSettings({ block, onUpdate, uploadImg }: {
 
   if (block.type === 'text') return (
     <div>
-      <Field label="Content">
+      <SettingsField label="Content">
         <textarea
           value={block.content}
           onChange={e => set('content', e.target.value)}
@@ -337,12 +342,12 @@ function BlockSettings({ block, onUpdate, uploadImg }: {
           style={{ width: '100%', background: '#f5f5f7', border: '1px solid #e5e5ea', borderRadius: 6, padding: '8px 10px', fontSize: 11, color: '#111', outline: 'none', resize: 'vertical', fontFamily: 'monospace', boxSizing: 'border-box' }}
         />
         <div style={{ fontSize: 10, color: '#aaa', marginTop: 4 }}>HTML accepted · use {'{{name}}'} for recipient</div>
-      </Field>
-      <Field label="Font">
+      </SettingsField>
+      <SettingsField label="Font">
         <select value={block.fontFamily} onChange={e => set('fontFamily', e.target.value)} style={{ width: '100%', background: '#f5f5f7', border: '1px solid #e5e5ea', borderRadius: 6, padding: '7px 10px', fontSize: 12, color: '#111', outline: 'none' }}>
           {['Arial', 'Georgia', 'Trebuchet MS', 'Courier New', 'Verdana'].map(f => <option key={f}>{f}</option>)}
         </select>
-      </Field>
+      </SettingsField>
       {numField('Padding', 'padding', 0, 80)}
       {colorRow('Background', 'bgColor')}
     </div>
@@ -350,8 +355,8 @@ function BlockSettings({ block, onUpdate, uploadImg }: {
 
   if (block.type === 'button') return (
     <div>
-      <Field label="Button text">{inp({ type: 'text', value: block.text, onChange: e => set('text', e.target.value) })}</Field>
-      <Field label="Link URL">{inp({ type: 'url', value: block.url, onChange: e => set('url', e.target.value), placeholder: 'https://…' })}</Field>
+      <SettingsField label="Button text">{inp({ type: 'text', value: block.text, onChange: e => set('text', e.target.value) })}</SettingsField>
+      <SettingsField label="Link URL">{inp({ type: 'url', value: block.url, onChange: e => set('url', e.target.value), placeholder: 'https://…' })}</SettingsField>
       {colorRow('Button colour', 'buttonBg')}
       {colorRow('Text colour', 'textColor')}
       {colorRow('Section background', 'bgColor')}
@@ -360,12 +365,12 @@ function BlockSettings({ block, onUpdate, uploadImg }: {
       {numField('Horizontal padding', 'paddingH', 8, 80)}
       {numField('Border radius', 'borderRadius', 0, 40)}
       {alignRow('align')}
-      <Field label="Full width">
+      <SettingsField label="Full width">
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
           <input type="checkbox" checked={block.fullWidth} onChange={e => set('fullWidth', e.target.checked)} />
           <span style={{ fontSize: 12, color: '#111' }}>Stretch button to full width</span>
         </label>
-      </Field>
+      </SettingsField>
     </div>
   )
 
