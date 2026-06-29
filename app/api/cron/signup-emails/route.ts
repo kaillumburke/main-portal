@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { serverDb } from '@/lib/firebase-server'
 import { collection, query, where, getDocs, updateDoc, Timestamp } from 'firebase/firestore'
+import type { EmailConfig } from '@/app/mansion/dashboard/signups/page'
+import { generateEmailHTML } from '@/app/mansion/dashboard/signups/page'
 
-function buildHtml(bodyText: string, senderName: string) {
-  const lines = bodyText
-    .split('\n')
-    .map(line => line.trim() === '' ? '<br/>' : `<p style="margin:0 0 10px;line-height:1.6">${line}</p>`)
-    .join('')
-  return `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;padding:40px 24px;color:#111;">
-    <div style="font-size:16px;font-weight:800;letter-spacing:-0.02em;margin-bottom:28px;text-transform:uppercase;">${senderName}</div>
+function legacyHtml(bodyText: string, senderName: string) {
+  const lines = bodyText.split('\n')
+    .map(l => l.trim() === '' ? '<br/>' : `<p style="margin:0 0 10px;line-height:1.6">${l}</p>`).join('')
+  return `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;padding:40px 24px;color:#111">
+    <div style="font-size:16px;font-weight:800;letter-spacing:-0.02em;margin-bottom:28px;text-transform:uppercase">${senderName}</div>
     ${lines}
   </div>`
 }
@@ -24,32 +24,40 @@ export async function GET(req: NextRequest) {
   const now = Timestamp.now()
 
   const snap = await getDocs(
-    query(
-      collection(serverDb, 'scheduledSignUpEmails'),
-      where('sent', '==', false),
-      where('sendAt', '<=', now),
-    )
+    query(collection(serverDb, 'scheduledSignUpEmails'), where('sent', '==', false), where('sendAt', '<=', now))
   )
 
-  if (snap.empty) {
-    return NextResponse.json({ sent: 0 })
-  }
+  if (snap.empty) return NextResponse.json({ sent: 0 })
 
   let sent = 0
   const errors: string[] = []
 
   await Promise.all(snap.docs.map(async docSnap => {
     const d = docSnap.data() as {
-      from: string; senderName: string; userEmail: string; userName: string;
-      subject: string; body: string
+      from: string; senderName: string; userEmail: string; userName: string
+      emailConfig?: EmailConfig
+      // Legacy
+      subject?: string; body?: string
     }
     try {
-      await resend.emails.send({
-        from: d.from,
-        to: d.userEmail,
-        subject: d.subject,
-        html: buildHtml(d.body.replace(/\{\{name\}\}/g, d.userName || 'there'), d.senderName),
-      })
+      const name = d.userName || 'there'
+      let html: string
+      let subject: string
+
+      if (d.emailConfig) {
+        subject = d.emailConfig.subject
+        html = generateEmailHTML(d.emailConfig, name)
+      } else {
+        subject = d.subject ?? ''
+        html = legacyHtml((d.body ?? '').replace(/\{\{name\}\}/g, name), d.senderName)
+      }
+
+      if (!subject) {
+        await updateDoc(docSnap.ref, { sent: true, skipped: true, sentAt: Timestamp.now() })
+        return
+      }
+
+      await resend.emails.send({ from: d.from, to: d.userEmail, subject, html })
       await updateDoc(docSnap.ref, { sent: true, sentAt: Timestamp.now() })
       sent++
     } catch (err) {
