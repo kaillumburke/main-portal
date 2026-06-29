@@ -8,7 +8,7 @@ import { generateEmailHTML } from '@/app/mansion/dashboard/signups/page'
 export async function POST(req: NextRequest) {
   const resend = new Resend(process.env.RESEND_API_KEY!)
   try {
-    const { linkId, userEmail, userName } = await req.json()
+    const { linkId, userEmail, userName, userInstagram } = await req.json()
     if (!linkId || !userEmail) {
       return NextResponse.json({ error: 'linkId and userEmail required' }, { status: 400 })
     }
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
         to: userEmail,
         subject: conf.subject,
         ...(conf.preheader ? { text: conf.preheader } : {}),
-        html: generateEmailHTML(conf, userName ?? 'there'),
+        html: generateEmailHTML(conf, userName ?? 'there', userEmail, userInstagram ?? ''),
       })
     } else if (!conf && link.emailSubject && link.emailBody) {
       // Legacy fallback
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     const fu1 = link.followUp1
     if (fu1?.enabled && fu1.subject && fu1.sendAt) {
       await addDoc(scheduledCol, {
-        linkId, userEmail, userName: userName ?? '', from, senderName,
+        linkId, userEmail, userName: userName ?? '', userInstagram: userInstagram ?? '', from, senderName,
         emailConfig: fu1,
         sendAt: fu1.sendAt.toDate ? fu1.sendAt.toDate() : new Date(fu1.sendAt as unknown as string),
         sent: false,

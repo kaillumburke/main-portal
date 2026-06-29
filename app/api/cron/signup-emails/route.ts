@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
 
   await Promise.all(snap.docs.map(async docSnap => {
     const d = docSnap.data() as {
-      from: string; senderName: string; userEmail: string; userName: string
+      from: string; senderName: string; userEmail: string; userName: string; userInstagram?: string
       emailConfig?: EmailConfig
       // Legacy
       subject?: string; body?: string
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
 
       if (d.emailConfig) {
         subject = d.emailConfig.subject
-        html = generateEmailHTML(d.emailConfig, name)
+        html = generateEmailHTML(d.emailConfig, name, d.userEmail, d.userInstagram ?? '')
       } else {
         subject = d.subject ?? ''
         html = legacyHtml((d.body ?? '').replace(/\{\{name\}\}/g, name), d.senderName)

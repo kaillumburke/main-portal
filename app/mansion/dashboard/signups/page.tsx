@@ -123,8 +123,11 @@ ${block.link ? `<a href="${block.link}">` : ''}<img src="${block.src}" alt="${bl
   }
 }
 
-export function generateEmailHTML(cfg: EmailConfig, name = '{{name}}'): string {
-  const html = cfg.blocks.map(b => blockToHTML(b)).join('\n').replace(/\{\{name\}\}/g, name)
+export function generateEmailHTML(cfg: EmailConfig, name = '{{name}}', email = '', instagram = ''): string {
+  const html = cfg.blocks.map(b => blockToHTML(b)).join('\n')
+    .replace(/\{\{name\}\}/g, name || '{{name}}')
+    .replace(/\{\{email\}\}/g, email || '{{email}}')
+    .replace(/\{\{instagram\}\}/g, instagram ? `@${instagram}` : '{{instagram}}')
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${cfg.subject || 'Email'}</title></head>
 <body style="margin:0;padding:0;background:${cfg.emailBgColor};font-family:${cfg.fontFamily},Arial,sans-serif">
@@ -433,9 +436,22 @@ function TypographyRow({ font, size, bold, italic, onFont, onSize, onBold, onIta
   )
 }
 
+const MERGE_TAGS = [
+  { label: 'First name', token: '{{name}}', icon: '👤' },
+  { label: 'Email address', token: '{{email}}', icon: '✉' },
+  { label: 'Instagram', token: '{{instagram}}', icon: '📷' },
+]
+
 function RichTextEditor({ content, fontFamily, onChange }: { content: string; fontFamily: string; onChange: (v: string) => void }) {
   const editorRef = useRef<HTMLDivElement>(null)
   const [fontSize, setFontSize] = useState('16')
+  const [mergeOpen, setMergeOpen] = useState(false)
+  const savedRange = useRef<Range | null>(null)
+
+  const saveSelection = () => {
+    const sel = window.getSelection()
+    if (sel && sel.rangeCount > 0) savedRange.current = sel.getRangeAt(0).cloneRange()
+  }
 
   const exec = (cmd: string, value?: string) => {
     editorRef.current?.focus()
@@ -443,41 +459,103 @@ function RichTextEditor({ content, fontFamily, onChange }: { content: string; fo
     if (editorRef.current) onChange(editorRef.current.innerHTML)
   }
 
-  const fmtBtn = (label: string, cmd: string, val?: string, extra?: React.CSSProperties) => (
-    <button onMouseDown={e => { e.preventDefault(); exec(cmd, val) }}
-      style={{ padding: '4px 8px', border: '1px solid #e5e5ea', borderRadius: 5, background: '#f5f5f7', color: '#111', fontSize: 11, cursor: 'pointer', fontWeight: cmd === 'bold' ? 700 : 400, fontStyle: cmd === 'italic' ? 'italic' as const : 'normal', textDecoration: cmd === 'underline' ? 'underline' : 'none', ...extra }}>
+  const insertToken = (token: string) => {
+    setMergeOpen(false)
+    editorRef.current?.focus()
+    const sel = window.getSelection()
+    // Restore saved range if selection was lost when clicking toolbar button
+    if (savedRange.current && sel) {
+      sel.removeAllRanges()
+      sel.addRange(savedRange.current)
+    }
+    // Insert a styled pill span for the token
+    const span = document.createElement('span')
+    span.style.cssText = 'display:inline-block;background:#111;color:#fff;border-radius:4px;padding:1px 6px;font-size:11px;font-family:Arial,sans-serif;font-weight:600;letter-spacing:0.03em'
+    span.contentEditable = 'false'
+    span.dataset.token = token
+    span.textContent = token === '{{name}}' ? 'First name' : token === '{{email}}' ? 'Email' : 'Instagram'
+    span.title = token
+    document.execCommand('insertHTML', false, span.outerHTML + '&nbsp;')
+    if (editorRef.current) onChange(editorRef.current.innerHTML)
+  }
+
+  // Before generating HTML for sending, convert pill spans back to raw tokens
+  // (generateEmailHTML receives innerHTML which may contain pill spans — we normalise here)
+  const getCleanHTML = (html: string) => {
+    const div = document.createElement('div')
+    div.innerHTML = html
+    div.querySelectorAll('span[data-token]').forEach(el => {
+      el.replaceWith(el.getAttribute('data-token') ?? '')
+    })
+    return div.innerHTML
+  }
+
+  const fmtBtn = (label: string, cmd: string, extra?: React.CSSProperties) => (
+    <button onMouseDown={e => { e.preventDefault(); exec(cmd) }}
+      style={{ padding: '4px 8px', border: '1px solid #e5e5ea', borderRadius: 5, background: '#f5f5f7', color: '#111', fontSize: 11, cursor: 'pointer', ...extra }}>
       {label}
     </button>
   )
 
   return (
-    <div style={{ border: '1px solid #e5e5ea', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
+    <div style={{ border: '1px solid #e5e5ea', borderRadius: 8, overflow: 'visible', background: '#fff' }}>
       {/* Toolbar */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, padding: '6px 8px', background: '#f5f5f7', borderBottom: '1px solid #e5e5ea' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, padding: '6px 8px', background: '#f5f5f7', borderBottom: '1px solid #e5e5ea', borderRadius: '8px 8px 0 0' }}>
         <select onChange={e => exec('fontName', e.target.value)} defaultValue={fontFamily}
           style={{ background: '#fff', border: '1px solid #e5e5ea', borderRadius: 5, padding: '3px 5px', fontSize: 10, color: '#111', outline: 'none', cursor: 'pointer' }}>
           {FONTS.map(f => <option key={f} value={f}>{f}</option>)}
         </select>
-        <select value={fontSize} onChange={e => { setFontSize(e.target.value); exec('fontSize', '7'); setTimeout(() => { editorRef.current?.querySelectorAll('font[size="7"]').forEach(el => { (el as HTMLElement).removeAttribute('size'); (el as HTMLElement).style.fontSize = `${e.target.value}px` }) }, 0) }}
-          style={{ background: '#fff', border: '1px solid #e5e5ea', borderRadius: 5, padding: '3px 5px', fontSize: 10, color: '#111', outline: 'none', cursor: 'pointer', width: 50 }}>
+        <select value={fontSize} onChange={e => {
+          setFontSize(e.target.value)
+          exec('fontSize', '7')
+          setTimeout(() => { editorRef.current?.querySelectorAll('font[size="7"]').forEach(el => { (el as HTMLElement).removeAttribute('size'); (el as HTMLElement).style.fontSize = `${e.target.value}px` }) }, 0)
+        }} style={{ background: '#fff', border: '1px solid #e5e5ea', borderRadius: 5, padding: '3px 5px', fontSize: 10, color: '#111', outline: 'none', cursor: 'pointer', width: 50 }}>
           {[10, 12, 14, 16, 18, 20, 24, 28, 32, 36].map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        {fmtBtn('B', 'bold', undefined, { fontWeight: 700 })}
-        {fmtBtn('I', 'italic', undefined, { fontStyle: 'italic' })}
-        {fmtBtn('U', 'underline', undefined, { textDecoration: 'underline' })}
+        {fmtBtn('B', 'bold', { fontWeight: 700 })}
+        {fmtBtn('I', 'italic', { fontStyle: 'italic' })}
+        {fmtBtn('U', 'underline', { textDecoration: 'underline' })}
         <div style={{ width: 1, background: '#e5e5ea', margin: '0 2px' }} />
-        {fmtBtn('≡', 'justifyLeft')}
-        {fmtBtn('≡', 'justifyCenter')}
-        {fmtBtn('≡', 'justifyRight')}
+        {fmtBtn('⬅', 'justifyLeft')}
+        {fmtBtn('⬛', 'justifyCenter')}
+        {fmtBtn('➡', 'justifyRight')}
+        <div style={{ width: 1, background: '#e5e5ea', margin: '0 2px' }} />
+        {/* Personalise button */}
+        <div style={{ position: 'relative' }}>
+          <button
+            onMouseDown={e => { e.preventDefault(); saveSelection(); setMergeOpen(o => !o) }}
+            style={{ padding: '4px 8px', border: '1px solid #e5e5ea', borderRadius: 5, background: mergeOpen ? '#111' : '#f5f5f7', color: mergeOpen ? '#fff' : '#111', fontSize: 10, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            + Personalise
+          </button>
+          {mergeOpen && (
+            <div style={{ position: 'absolute', top: '110%', left: 0, zIndex: 50, background: '#fff', border: '1px solid #e5e5ea', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 8, minWidth: 180 }}>
+              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#aaa', padding: '2px 8px 6px', fontWeight: 700 }}>Insert recipient data</div>
+              {MERGE_TAGS.map(t => (
+                <button key={t.token} onMouseDown={e => { e.preventDefault(); insertToken(t.token) }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px', border: 'none', background: 'none', borderRadius: 7, cursor: 'pointer', textAlign: 'left' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#f5f5f7')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+                  <span style={{ fontSize: 15 }}>{t.icon}</span>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#111' }}>{t.label}</div>
+                    <div style={{ fontSize: 10, color: '#aaa', fontFamily: 'monospace' }}>{t.token}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
       {/* Editable area */}
       <div
         ref={editorRef}
         contentEditable
         suppressContentEditableWarning
-        onInput={() => { if (editorRef.current) onChange(editorRef.current.innerHTML) }}
-        dangerouslySetInnerHTML={{ __html: content }}
-        style={{ minHeight: 120, padding: '10px 12px', fontSize: 14, color: '#111', outline: 'none', fontFamily: `${fontFamily}, Arial, sans-serif`, lineHeight: 1.7 }}
+        onMouseUp={saveSelection}
+        onKeyUp={saveSelection}
+        onInput={() => { if (editorRef.current) onChange(getCleanHTML(editorRef.current.innerHTML)) }}
+        dangerouslySetInnerHTML={{ __html: content.replace(/\{\{name\}\}/g, '<span style="display:inline-block;background:#111;color:#fff;border-radius:4px;padding:1px 6px;font-size:11px;font-family:Arial,sans-serif;font-weight:600;letter-spacing:0.03em" contenteditable="false" data-token="{{name}}" title="{{name}}">First name</span>').replace(/\{\{email\}\}/g, '<span style="display:inline-block;background:#111;color:#fff;border-radius:4px;padding:1px 6px;font-size:11px;font-family:Arial,sans-serif;font-weight:600;letter-spacing:0.03em" contenteditable="false" data-token="{{email}}" title="{{email}}">Email</span>').replace(/\{\{instagram\}\}/g, '<span style="display:inline-block;background:#111;color:#fff;border-radius:4px;padding:1px 6px;font-size:11px;font-family:Arial,sans-serif;font-weight:600;letter-spacing:0.03em" contenteditable="false" data-token="{{instagram}}" title="{{instagram}}">Instagram</span>') }}
+        style={{ minHeight: 120, padding: '10px 12px', fontSize: 14, color: '#111', outline: 'none', fontFamily: `${fontFamily}, Arial, sans-serif`, lineHeight: 1.7, borderRadius: '0 0 8px 8px' }}
       />
     </div>
   )
@@ -607,7 +685,6 @@ function BlockSettings({ block, onUpdate, uploadImg }: {
     <div>
       <SettingsField label="Content">
         <RichTextEditor content={block.content} fontFamily={block.fontFamily} onChange={v => set('content', v)} />
-        <div style={{ fontSize: 10, color: '#aaa', marginTop: 4 }}>Use {'{{name}}'} for recipient's name</div>
       </SettingsField>
       {numField('Padding', 'padding', 0, 80)}
       {colorRow('Background', 'bgColor')}
