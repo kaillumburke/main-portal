@@ -7,6 +7,116 @@ import { db, storage } from '@/lib/firebase'
 
 const APP_ICON_URL = 'https://mansion-nightclub-portal.vercel.app/app-icon.png'
 
+// ─── Pan / zoom adjust modal ──────────────────────────────────────────────────
+
+const OUTPUT_W = 1200
+const OUTPUT_H = 600 // 2:1 — standard notification banner ratio
+
+function ImageAdjustModal({ src, onConfirm, onClose }: {
+  src: string
+  onConfirm: (blob: Blob) => void
+  onClose: () => void
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [img, setImg] = useState<HTMLImageElement | null>(null)
+  // offset = where the image top-left is, in canvas-display coords
+  const [offset, setOffset] = useState({ x: 0, y: 0 })
+  const [scale, setScale] = useState(1)
+  const dragging = useRef(false)
+  const lastPos = useRef({ x: 0, y: 0 })
+
+  const DISPLAY_W = 600
+  const DISPLAY_H = 300
+
+  useEffect(() => {
+    const image = new Image()
+    image.crossOrigin = 'anonymous'
+    image.onload = () => {
+      setImg(image)
+      // fit image to canvas initially
+      const fitScale = Math.max(DISPLAY_W / image.naturalWidth, DISPLAY_H / image.naturalHeight)
+      setScale(fitScale)
+      setOffset({
+        x: (DISPLAY_W - image.naturalWidth * fitScale) / 2,
+        y: (DISPLAY_H - image.naturalHeight * fitScale) / 2,
+      })
+    }
+    image.src = src
+  }, [src])
+
+  // Draw
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas || !img) return
+    canvas.width = DISPLAY_W
+    canvas.height = DISPLAY_H
+    const ctx = canvas.getContext('2d')!
+    ctx.clearRect(0, 0, DISPLAY_W, DISPLAY_H)
+    ctx.drawImage(img, offset.x, offset.y, img.naturalWidth * scale, img.naturalHeight * scale)
+    // grid overlay
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'
+    ctx.lineWidth = 1
+    for (let x = 0; x < DISPLAY_W; x += DISPLAY_W / 3) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, DISPLAY_H); ctx.stroke() }
+    for (let y = 0; y < DISPLAY_H; y += DISPLAY_H / 3) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(DISPLAY_W, y); ctx.stroke() }
+    // border
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)'
+    ctx.lineWidth = 2
+    ctx.strokeRect(1, 1, DISPLAY_W - 2, DISPLAY_H - 2)
+  }, [img, offset, scale])
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    dragging.current = true
+    lastPos.current = { x: e.clientX, y: e.clientY }
+  }
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!dragging.current) return
+    const dx = e.clientX - lastPos.current.x
+    const dy = e.clientY - lastPos.current.y
+    lastPos.current = { x: e.clientX, y: e.clientY }
+    setOffset(o => ({ x: o.x + dx, y: o.y + dy }))
+  }
+  const onMouseUp = () => { dragging.current = false }
+
+  const onWheel = (e: React.WheelEvent) => {
+    e.preventDefault()
+    const factor = e.deltaY < 0 ? 1.08 : 0.93
+    setScale(s => Math.max(0.1, Math.min(10, s * factor)))
+  }
+
+  const confirm = () => {
+    if (!img) return
+    const off = document.createElement('canvas')
+    off.width = OUTPUT_W; off.height = OUTPUT_H
+    const ctx = off.getContext('2d')!
+    const ratio = OUTPUT_W / DISPLAY_W
+    ctx.drawImage(img, offset.x * ratio, offset.y * ratio, img.naturalWidth * scale * ratio, img.naturalHeight * scale * ratio)
+    off.toBlob(b => { if (b) onConfirm(b) }, 'image/jpeg', 0.92)
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+      <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>Drag to reposition · scroll to zoom</div>
+      <canvas ref={canvasRef}
+        style={{ display: 'block', cursor: 'grab', borderRadius: 10, boxShadow: '0 8px 40px rgba(0,0,0,0.6)', userSelect: 'none' }}
+        onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
+        onWheel={onWheel} />
+      {/* Zoom slider */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ color: '#aaa', fontSize: 11 }}>−</span>
+        <input type="range" min={0.05} max={5} step={0.01} value={scale}
+          onChange={e => setScale(Number(e.target.value))}
+          style={{ width: 200, accentColor: '#fff' }} />
+        <span style={{ color: '#aaa', fontSize: 11 }}>+</span>
+        <span style={{ color: '#aaa', fontSize: 11, marginLeft: 8 }}>{Math.round(scale * 100)}%</span>
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button onClick={onClose} style={{ padding: '9px 24px', borderRadius: 8, background: '#333', color: '#fff', border: 'none', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+        <button onClick={confirm} disabled={!img} style={{ padding: '9px 24px', borderRadius: 8, background: '#fff', color: '#111', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Apply</button>
+      </div>
+    </div>
+  )
+}
+
 const audiences = [
   { value: 'everyone', label: 'Everyone', desc: 'All subscribers' },
   { value: 'ticketHolders', label: 'Ticket Holders', desc: 'Anyone who bought a ticket' },
@@ -41,6 +151,7 @@ export default function NotificationsPage() {
   const [selectedSignUpSlug, setSelectedSignUpSlug] = useState('')
   const [imgUploading, setImgUploading] = useState(false)
   const [imgDragOver, setImgDragOver] = useState(false)
+  const [adjustSrc, setAdjustSrc] = useState<string | null>(null)
   const imgInputRef = useRef<HTMLInputElement>(null)
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
@@ -72,19 +183,30 @@ export default function NotificationsPage() {
     )
   }
 
-  const uploadImage = useCallback(async (file: File) => {
+  const uploadBlob = useCallback(async (blob: Blob, name: string): Promise<string> => {
+    const storageRef = ref(storage, `notification-images/${Date.now()}-${name}`)
+    const task = uploadBytesResumable(storageRef, blob)
+    return new Promise((resolve, reject) => {
+      task.on('state_changed', () => {}, reject, async () => resolve(await getDownloadURL(task.snapshot.ref)))
+    })
+  }, [])
+
+  const uploadImage = useCallback((file: File) => {
+    // Show adjust modal first — upload happens after user confirms positioning
+    const objectUrl = URL.createObjectURL(file)
+    setAdjustSrc(objectUrl)
+  }, [])
+
+  const handleAdjustConfirm = useCallback(async (blob: Blob) => {
+    setAdjustSrc(null)
     setImgUploading(true)
     try {
-      const storageRef = ref(storage, `notification-images/${Date.now()}-${file.name}`)
-      const task = uploadBytesResumable(storageRef, file)
-      const url: string = await new Promise((resolve, reject) => {
-        task.on('state_changed', () => {}, reject, async () => resolve(await getDownloadURL(task.snapshot.ref)))
-      })
+      const url = await uploadBlob(blob, 'notification.jpg')
       setImageUrl(url)
     } finally {
       setImgUploading(false)
     }
-  }, [])
+  }, [uploadBlob])
 
   const handleImgDrop = (e: React.DragEvent) => {
     e.preventDefault(); setImgDragOver(false)
@@ -208,6 +330,13 @@ export default function NotificationsPage() {
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: '#f5f5f7' }}>
+      {adjustSrc && (
+        <ImageAdjustModal
+          src={adjustSrc}
+          onConfirm={handleAdjustConfirm}
+          onClose={() => setAdjustSrc(null)}
+        />
+      )}
       <div className="px-8 py-5" style={{ borderBottom: '1px solid #f0f0f2', background: '#f5f5f7' }}>
         <h1 className="text-base font-bold text-gray-900">Push Notifications</h1>
         <p className="text-xs mt-0.5" style={{ color: '#6e6e73' }}>Send to app subscribers via OneSignal</p>
@@ -269,8 +398,12 @@ export default function NotificationsPage() {
             {imageUrl ? (
               <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid #e5e5ea' }}>
                 <img src={imageUrl} alt="" style={{ width: '100%', maxHeight: 140, objectFit: 'cover', display: 'block' }} />
-                <button onClick={() => setImageUrl('')}
-                  style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: 20, width: 22, height: 22, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>✕</button>
+                <div style={{ position: 'absolute', top: 6, right: 6, display: 'flex', gap: 4 }}>
+                  <button onClick={() => setAdjustSrc(imageUrl)}
+                    style={{ background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: 20, padding: '3px 9px', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>Adjust</button>
+                  <button onClick={() => setImageUrl('')}
+                    style={{ background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: 20, width: 22, height: 22, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>✕</button>
+                </div>
               </div>
             ) : (
               <div
