@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
-import { db } from '@/lib/firebase-admin'
+import { serverDb } from '@/lib/firebase-server'
+import { collection, query, where, getDocs, updateDoc, Timestamp } from 'firebase/firestore'
 
 function buildHtml(bodyText: string, senderName: string) {
   const lines = bodyText
@@ -14,20 +15,21 @@ function buildHtml(bodyText: string, senderName: string) {
 }
 
 export async function GET(req: NextRequest) {
-  // Verify this is called by Vercel Cron
   const auth = req.headers.get('authorization')
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const resend = new Resend(process.env.RESEND_API_KEY!)
-  const now = new Date()
+  const now = Timestamp.now()
 
-  const snap = await db.collection('scheduledSignUpEmails')
-    .where('sent', '==', false)
-    .where('sendAt', '<=', now)
-    .limit(50)
-    .get()
+  const snap = await getDocs(
+    query(
+      collection(serverDb, 'scheduledSignUpEmails'),
+      where('sent', '==', false),
+      where('sendAt', '<=', now),
+    )
+  )
 
   if (snap.empty) {
     return NextResponse.json({ sent: 0 })
@@ -48,7 +50,7 @@ export async function GET(req: NextRequest) {
         subject: d.subject,
         html: buildHtml(d.body.replace(/\{\{name\}\}/g, d.userName || 'there'), d.senderName),
       })
-      await docSnap.ref.update({ sent: true, sentAt: new Date() })
+      await updateDoc(docSnap.ref, { sent: true, sentAt: Timestamp.now() })
       sent++
     } catch (err) {
       errors.push(`${docSnap.id}: ${String(err)}`)
