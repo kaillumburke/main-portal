@@ -240,6 +240,174 @@ function SettingsField({ label, children }: { label: string; children: React.Rea
 
 const settingsInpStyle: React.CSSProperties = { width: '100%', background: '#f5f5f7', border: '1px solid #e5e5ea', borderRadius: 6, padding: '7px 10px', fontSize: 12, color: '#111', outline: 'none', boxSizing: 'border-box' }
 
+// ─── Image crop modal ─────────────────────────────────────────────────────────
+
+type CropRect = { x: number; y: number; w: number; h: number }
+type DragMode = 'move' | 'nw' | 'ne' | 'sw' | 'se' | null
+
+function ImageCropModal({ src, onConfirm, onClose, uploadImg }: {
+  src: string
+  onConfirm: (url: string) => void
+  onClose: () => void
+  uploadImg: (f: File, p: string) => Promise<string>
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [imgEl, setImgEl] = useState<HTMLImageElement | null>(null)
+  const [displaySize, setDisplaySize] = useState({ w: 0, h: 0 })
+  const [crop, setCrop] = useState<CropRect>({ x: 0.1, y: 0.1, w: 0.8, h: 0.8 }) // normalised 0-1
+  const [dragging, setDragging] = useState<DragMode>(null)
+  const dragStart = useRef<{ mx: number; my: number; crop: CropRect } | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  // Load image
+  useEffect(() => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      setImgEl(img)
+      const maxW = Math.min(700, window.innerWidth - 80)
+      const maxH = window.innerHeight - 220
+      const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1)
+      setDisplaySize({ w: Math.round(img.naturalWidth * scale), h: Math.round(img.naturalHeight * scale) })
+    }
+    img.src = src
+  }, [src])
+
+  // Draw overlay
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas || !imgEl || displaySize.w === 0) return
+    canvas.width = displaySize.w
+    canvas.height = displaySize.h
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(imgEl, 0, 0, displaySize.w, displaySize.h)
+    // Darken outside crop
+    const cx = crop.x * displaySize.w, cy = crop.y * displaySize.h
+    const cw = crop.w * displaySize.w, ch = crop.h * displaySize.h
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'
+    ctx.fillRect(0, 0, displaySize.w, displaySize.h)
+    ctx.clearRect(cx, cy, cw, ch)
+    ctx.drawImage(imgEl, cx, cy, cw, ch, cx, cy, cw, ch)
+    // Border
+    ctx.strokeStyle = '#fff'
+    ctx.lineWidth = 2
+    ctx.strokeRect(cx, cy, cw, ch)
+    // Rule of thirds
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'
+    ctx.lineWidth = 1
+    for (let i = 1; i < 3; i++) {
+      ctx.beginPath(); ctx.moveTo(cx + cw * i / 3, cy); ctx.lineTo(cx + cw * i / 3, cy + ch); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(cx, cy + ch * i / 3); ctx.lineTo(cx + cw, cy + ch * i / 3); ctx.stroke()
+    }
+    // Corner handles
+    const hs = 8
+    ctx.fillStyle = '#fff'
+    for (const [hx, hy] of [[cx, cy], [cx + cw, cy], [cx, cy + ch], [cx + cw, cy + ch]])
+      ctx.fillRect(hx - hs / 2, hy - hs / 2, hs, hs)
+  }, [imgEl, displaySize, crop])
+
+  const hitTest = (mx: number, my: number): DragMode => {
+    const cx = crop.x * displaySize.w, cy = crop.y * displaySize.h
+    const cw = crop.w * displaySize.w, ch = crop.h * displaySize.h
+    const hs = 16
+    if (Math.abs(mx - cx) < hs && Math.abs(my - cy) < hs) return 'nw'
+    if (Math.abs(mx - (cx + cw)) < hs && Math.abs(my - cy) < hs) return 'ne'
+    if (Math.abs(mx - cx) < hs && Math.abs(my - (cy + ch)) < hs) return 'sw'
+    if (Math.abs(mx - (cx + cw)) < hs && Math.abs(my - (cy + ch)) < hs) return 'se'
+    if (mx > cx && mx < cx + cw && my > cy && my < cy + ch) return 'move'
+    return null
+  }
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    const rect = canvasRef.current!.getBoundingClientRect()
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top
+    const mode = hitTest(mx, my)
+    setDragging(mode)
+    if (mode) dragStart.current = { mx, my, crop: { ...crop } }
+  }
+
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!dragging || !dragStart.current) return
+    const rect = canvasRef.current!.getBoundingClientRect()
+    const dx = (e.clientX - rect.left - dragStart.current.mx) / displaySize.w
+    const dy = (e.clientY - rect.top - dragStart.current.my) / displaySize.h
+    const c = { ...dragStart.current.crop }
+    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
+    const minS = 0.05
+    let { x, y, w, h } = c
+    if (dragging === 'move') {
+      x = clamp(c.x + dx, 0, 1 - c.w); y = clamp(c.y + dy, 0, 1 - c.h)
+    } else if (dragging === 'nw') {
+      const nx = clamp(c.x + dx, 0, c.x + c.w - minS); const ny = clamp(c.y + dy, 0, c.y + c.h - minS)
+      w = c.w + (c.x - nx); h = c.h + (c.y - ny); x = nx; y = ny
+    } else if (dragging === 'ne') {
+      const nw = clamp(c.w + dx, minS, 1 - c.x); const ny = clamp(c.y + dy, 0, c.y + c.h - minS)
+      w = nw; h = c.h + (c.y - ny); y = ny
+    } else if (dragging === 'sw') {
+      const nx = clamp(c.x + dx, 0, c.x + c.w - minS); const nh = clamp(c.h + dy, minS, 1 - c.y)
+      w = c.w + (c.x - nx); h = nh; x = nx
+    } else if (dragging === 'se') {
+      w = clamp(c.w + dx, minS, 1 - c.x); h = clamp(c.h + dy, minS, 1 - c.y)
+    }
+    setCrop({ x, y, w, h })
+  }
+
+  const onMouseUp = () => { setDragging(null); dragStart.current = null }
+
+  const getCursor = (e: React.MouseEvent): string => {
+    if (dragging) return dragging === 'move' ? 'grabbing' : 'crosshair'
+    const rect = canvasRef.current?.getBoundingClientRect()
+    if (!rect) return 'default'
+    const mode = hitTest(e.clientX - rect.left, e.clientY - rect.top)
+    if (!mode) return 'default'
+    if (mode === 'move') return 'grab'
+    return 'crosshair'
+  }
+  const [cursor, setCursor] = useState('default')
+
+  const confirmCrop = async () => {
+    if (!imgEl) return
+    setSaving(true)
+    try {
+      const offscreen = document.createElement('canvas')
+      const sx = Math.round(crop.x * imgEl.naturalWidth)
+      const sy = Math.round(crop.y * imgEl.naturalHeight)
+      const sw = Math.round(crop.w * imgEl.naturalWidth)
+      const sh = Math.round(crop.h * imgEl.naturalHeight)
+      offscreen.width = sw; offscreen.height = sh
+      offscreen.getContext('2d')!.drawImage(imgEl, sx, sy, sw, sh, 0, 0, sw, sh)
+      const blob: Blob = await new Promise(res => offscreen.toBlob(b => res(b!), 'image/jpeg', 0.92))
+      const file = new File([blob], `crop-${Date.now()}.jpg`, { type: 'image/jpeg' })
+      const url = await uploadImg(file, `email-images/crop-${uid()}.jpg`)
+      onConfirm(url)
+    } finally { setSaving(false) }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+      <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>Drag to crop · handles at corners to resize</div>
+      {displaySize.w > 0 && (
+        <canvas
+          ref={canvasRef}
+          style={{ display: 'block', cursor, userSelect: 'none', borderRadius: 8, boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}
+          onMouseDown={onMouseDown}
+          onMouseMove={e => { onMouseMove(e); setCursor(getCursor(e)) }}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseUp}
+        />
+      )}
+      {!imgEl && <div style={{ color: '#aaa', fontSize: 13 }}>Loading image…</div>}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button onClick={onClose} style={{ padding: '9px 24px', borderRadius: 8, background: '#333', color: '#fff', border: 'none', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+        <button onClick={confirmCrop} disabled={saving || !imgEl} style={{ padding: '9px 24px', borderRadius: 8, background: '#fff', color: '#111', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
+          {saving ? 'Uploading…' : 'Apply crop'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function TypographyRow({ font, size, bold, italic, onFont, onSize, onBold, onItalic }: {
   font: string; size: number; bold: boolean; italic: boolean
   onFont: (v: string) => void; onSize: (v: number) => void
@@ -323,6 +491,7 @@ function BlockSettings({ block, onUpdate, uploadImg }: {
   uploadImg: (f: File, p: string) => Promise<string>
 }) {
   const [uploading, setUploading] = useState(false)
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
   const imgRef = useRef<HTMLInputElement>(null)
   const logoRef = useRef<HTMLInputElement>(null)
 
@@ -414,7 +583,16 @@ function BlockSettings({ block, onUpdate, uploadImg }: {
 
   if (block.type === 'image') return (
     <div>
+      {cropSrc && <ImageCropModal src={cropSrc} uploadImg={uploadImg} onClose={() => setCropSrc(null)} onConfirm={url => { set('src', url); setCropSrc(null) }} />}
       {uploadField('Image', 'src', imgRef, 'email-images')}
+      {block.src && (
+        <div style={{ marginBottom: 16 }}>
+          <button onClick={() => setCropSrc(block.src)}
+            style={{ width: '100%', padding: '7px 0', borderRadius: 7, border: '1px solid #e5e5ea', background: '#f5f5f7', color: '#111', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            ✂ Crop image
+          </button>
+        </div>
+      )}
       <SettingsField label="Alt text">{inp({ type: 'text', value: block.alt, onChange: e => set('alt', e.target.value) })}</SettingsField>
       <SettingsField label="Link URL">{inp({ type: 'url', value: block.link, onChange: e => set('link', e.target.value), placeholder: 'https://…' })}</SettingsField>
       {numField('Width (%)', 'width', 10, 100)}
