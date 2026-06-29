@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import http2 from 'node:http2'
 import crypto from 'node:crypto'
-import { db } from '@/lib/firebase-admin'
+import { serverDb } from '@/lib/firebase-server'
+import { collection, getDocs } from 'firebase/firestore'
 
 const KEY_ID = process.env.APNS_KEY_ID!        // XKZFVWUVK3
 const TEAM_ID = process.env.APNS_TEAM_ID!       // 4V275QTAVK
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
   try {
     const { title, body, data } = await req.json()
 
-    const snapshot = await db.collection('push_tokens').get()
+    const snapshot = await getDocs(collection(serverDb, 'push_tokens'))
     if (snapshot.empty) {
       return NextResponse.json({ successful: 0, total: 0, message: 'No registered devices' })
     }
