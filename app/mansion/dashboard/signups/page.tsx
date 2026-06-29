@@ -205,7 +205,7 @@ function BlockInCanvas({ block, selected, total, index, onSelect, onDelete, onDu
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={onSelect}
-      style={{ position: 'relative', cursor: 'pointer', outline: selected ? '2px solid #5c6ac4' : hovered ? '2px solid #c4c8f0' : '2px solid transparent', outlineOffset: -2 }}>
+      style={{ position: 'relative', cursor: 'pointer', outline: selected ? '2px solid #111111' : hovered ? '2px solid #d0d0d5' : '2px solid transparent', outlineOffset: -2 }}>
       {inner}
       {(hovered || selected) && (
         <div style={{ position: 'absolute', top: 4, right: 4, display: 'flex', gap: 2, zIndex: 10 }} onClick={e => e.stopPropagation()}>
@@ -216,7 +216,7 @@ function BlockInCanvas({ block, selected, total, index, onSelect, onDelete, onDu
         </div>
       )}
       {selected && (
-        <div style={{ position: 'absolute', top: 4, left: 4, background: '#5c6ac4', color: '#fff', fontSize: 9, padding: '2px 6px', borderRadius: 4, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+        <div style={{ position: 'absolute', top: 4, left: 4, background: '#111111', color: '#fff', fontSize: 9, padding: '2px 6px', borderRadius: 4, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
           {block.type}
         </div>
       )}
@@ -269,7 +269,7 @@ function BlockSettings({ block, onUpdate, uploadImg }: {
       <div style={{ display: 'flex', gap: 4 }}>
         {(['left', 'center', 'right'] as Align[]).map(a => (
           <button key={a} onClick={() => set(key, a)}
-            style={{ flex: 1, padding: '6px 0', borderRadius: 6, border: `1px solid ${(block as any)[key] === a ? '#5c6ac4' : '#e5e5ea'}`, background: (block as any)[key] === a ? '#5c6ac4' : '#f5f5f7', color: (block as any)[key] === a ? '#fff' : '#6e6e73', fontSize: 11, cursor: 'pointer' }}>
+            style={{ flex: 1, padding: '6px 0', borderRadius: 6, border: `1px solid ${(block as any)[key] === a ? '#111111' : '#e5e5ea'}`, background: (block as any)[key] === a ? '#111111' : '#f5f5f7', color: (block as any)[key] === a ? '#fff' : '#6e6e73', fontSize: 11, cursor: 'pointer' }}>
             {a === 'left' ? '⬅' : a === 'center' ? '⬛' : '➡'}
           </button>
         ))}
@@ -408,7 +408,7 @@ function InsertButton({ onAdd }: { onAdd: (type: BlockType) => void }) {
   return (
     <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', margin: '2px 0' }}>
       <button onClick={() => setOpen(o => !o)}
-        style={{ background: open ? '#5c6ac4' : '#e5e5ea', color: open ? '#fff' : '#6e6e73', border: 'none', borderRadius: 12, width: 24, height: 24, fontSize: 14, cursor: 'pointer', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        style={{ background: open ? '#111111' : '#e5e5ea', color: open ? '#fff' : '#6e6e73', border: 'none', borderRadius: 12, width: 24, height: 24, fontSize: 14, cursor: 'pointer', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         +
       </button>
       {open && (
@@ -493,7 +493,7 @@ function EmailBuilderModal({ label, config, onChange, showSendAt, uploadImg, onC
         <div style={{ display: 'flex', gap: 4 }}>
           {(['desktop', 'mobile'] as const).map(m => (
             <button key={m} onClick={() => setPreview(m)}
-              style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: preview === m ? '#5c6ac4' : 'transparent', color: preview === m ? '#fff' : '#aaa', fontSize: 12, cursor: 'pointer' }}>
+              style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: preview === m ? '#111111' : 'transparent', color: preview === m ? '#fff' : '#aaa', fontSize: 12, cursor: 'pointer' }}>
               {m === 'desktop' ? '🖥 Desktop' : '📱 Mobile'}
             </button>
           ))}
@@ -503,7 +503,7 @@ function EmailBuilderModal({ label, config, onChange, showSendAt, uploadImg, onC
           </button>
         </div>
         <button onClick={onClose}
-          style={{ padding: '7px 20px', borderRadius: 8, background: '#5c6ac4', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          style={{ padding: '7px 20px', borderRadius: 8, background: '#111111', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
           Done
         </button>
       </div>
@@ -517,7 +517,7 @@ function EmailBuilderModal({ label, config, onChange, showSendAt, uploadImg, onC
           <div style={{ display: 'flex', borderBottom: '1px solid #2a2a35' }}>
             {(['blocks', 'settings'] as const).map(t => (
               <button key={t} onClick={() => setLeftTab(t)}
-                style={{ flex: 1, padding: '10px 0', background: 'none', border: 'none', borderBottom: leftTab === t ? '2px solid #5c6ac4' : '2px solid transparent', color: leftTab === t ? '#fff' : '#888', fontSize: 11, fontWeight: 600, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                style={{ flex: 1, padding: '10px 0', background: 'none', border: 'none', borderBottom: leftTab === t ? '2px solid #111111' : '2px solid transparent', color: leftTab === t ? '#fff' : '#888', fontSize: 11, fontWeight: 600, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 {t}
               </button>
             ))}
@@ -531,7 +531,7 @@ function EmailBuilderModal({ label, config, onChange, showSendAt, uploadImg, onC
                   {BLOCK_PALETTE.map(b => (
                     <button key={b.type} onClick={() => addBlock(b.type)}
                       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 4px', border: '1px solid #2a2a35', borderRadius: 8, background: '#1e1e2a', color: '#ccc', fontSize: 10, cursor: 'pointer' }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#2a2a3a'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#5c6ac4' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#2a2a3a'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#111111' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#1e1e2a'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#2a2a35' }}>
                       <span style={{ fontSize: 20 }}>{b.icon}</span>
                       {b.label}
@@ -682,7 +682,7 @@ function EmailBuilder({ label, subLabel, config, onChange, showSendAt, uploadImg
             {config.enabled && (
               <button onClick={() => setOpen(true)}
                 className="px-3 py-1.5 rounded-lg text-xs font-medium"
-                style={{ background: '#f0f0f2', color: '#5c6ac4', border: '1px solid #e5e5ea' }}>
+                style={{ background: '#f0f0f2', color: '#111111', border: '1px solid #e5e5ea' }}>
                 ✏ Edit email
               </button>
             )}
@@ -718,7 +718,7 @@ function EmailBuilder({ label, subLabel, config, onChange, showSendAt, uploadImg
                 </div>
                 <button onClick={() => setOpen(true)}
                   className="ml-auto px-3 py-1.5 rounded-lg text-xs font-semibold"
-                  style={{ background: '#5c6ac4', color: '#fff' }}>
+                  style={{ background: '#111111', color: '#fff' }}>
                   Open builder →
                 </button>
               </div>
