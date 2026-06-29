@@ -260,24 +260,22 @@ export default function CampaignsPage() {
                   onFocus={e => { e.target.style.borderColor = '#111' }} onBlur={e => { e.target.style.borderColor = S.border }} />
                 <p style={{ fontSize: 11, color: S.label, margin: '5px 0 0' }}>Sends from hello@connectclub.live</p>
               </div>
+              <div>
+                <label style={labelStyle}>Subject line</label>
+                <input value={emailConfig.subject} onChange={e => setEmailConfig(c => ({ ...c, subject: e.target.value }))}
+                  placeholder="e.g. 🎉 Tickets now live for Easter Weekend" style={inputStyle}
+                  onFocus={e => { e.target.style.borderColor = '#111' }} onBlur={e => { e.target.style.borderColor = S.border }} />
+              </div>
             </div>
 
             {/* Email builder card */}
             <div style={{ background: S.card, borderRadius: 14, border: `1px solid ${S.border}`, padding: 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <h2 style={{ fontSize: 14, fontWeight: 700, color: S.text, margin: 0 }}>Email content</h2>
+                <h2 style={{ fontSize: 14, fontWeight: 700, color: S.text, margin: 0 }}>Email body</h2>
                 <button onClick={() => setBuilderOpen(true)}
                   style={{ padding: '8px 16px', background: '#111', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>
                   {hasEmailContent ? 'Edit email' : 'Open builder'}
                 </button>
-              </div>
-
-              {/* Subject line preview */}
-              <div style={{ marginBottom: 12 }}>
-                <label style={labelStyle}>Subject line</label>
-                <input value={emailConfig.subject} onChange={e => setEmailConfig(c => ({ ...c, subject: e.target.value }))}
-                  placeholder="Set in the builder or type here…" style={inputStyle}
-                  onFocus={e => { e.target.style.borderColor = '#111' }} onBlur={e => { e.target.style.borderColor = S.border }} />
               </div>
 
               {hasEmailContent ? (
