@@ -13,7 +13,7 @@ import { db, storage } from '@/lib/firebase'
 type BlockType = 'header' | 'image' | 'text' | 'button' | 'divider' | 'spacer'
 type Align = 'left' | 'center' | 'right'
 
-interface HeaderBlock  { id: string; type: 'header';  bgColor: string; logoSrc: string; logoAlt: string; logoWidth: number; align: Align; title: string; subtitle: string; textColor: string; padding: number }
+interface HeaderBlock  { id: string; type: 'header';  bgColor: string; logoSrc: string; logoAlt: string; logoWidth: number; align: Align; title: string; subtitle: string; textColor: string; padding: number; titleFont: string; titleSize: number; titleBold: boolean; titleItalic: boolean; subtitleFont: string; subtitleSize: number; subtitleBold: boolean; subtitleItalic: boolean }
 interface ImageBlock   { id: string; type: 'image';   bgColor: string; src: string; alt: string; link: string; width: number; align: Align; padding: number; borderRadius: number }
 interface TextBlock    { id: string; type: 'text';    bgColor: string; content: string; fontFamily: string; padding: number }
 interface ButtonBlock  { id: string; type: 'button';  bgColor: string; text: string; url: string; buttonBg: string; textColor: string; fontSize: number; paddingV: number; paddingH: number; borderRadius: number; align: Align; fullWidth: boolean }
@@ -78,7 +78,7 @@ function uid() { return Math.random().toString(36).slice(2) }
 
 function defaultBlock(type: BlockType): EmailBlock {
   switch (type) {
-    case 'header':  return { id: uid(), type, bgColor: '#111111', logoSrc: '/mansion-logo.png', logoAlt: 'Mansion Liverpool', logoWidth: 140, align: 'center', title: '', subtitle: '', textColor: '#ffffff', padding: 32 }
+    case 'header':  return { id: uid(), type, bgColor: '#111111', logoSrc: '/mansion-logo.png', logoAlt: 'Mansion Liverpool', logoWidth: 140, align: 'center', title: '', subtitle: '', textColor: '#ffffff', padding: 32, titleFont: 'Arial', titleSize: 24, titleBold: true, titleItalic: false, subtitleFont: 'Arial', subtitleSize: 14, subtitleBold: false, subtitleItalic: false }
     case 'image':   return { id: uid(), type, bgColor: '#ffffff', src: '', alt: '', link: '', width: 100, align: 'center', padding: 0, borderRadius: 0 }
     case 'text':    return { id: uid(), type, bgColor: '#ffffff', content: '<p style="margin:0 0 14px;font-size:16px;line-height:1.7;color:#111111">Hi {{name}},</p><p style="margin:0;font-size:16px;line-height:1.7;color:#111111">Thanks for signing up! We\'ll be in touch soon.</p>', fontFamily: 'Arial', padding: 32 }
     case 'button':  return { id: uid(), type, bgColor: '#ffffff', text: 'Get tickets', url: '', buttonBg: '#111111', textColor: '#ffffff', fontSize: 15, paddingV: 14, paddingH: 32, borderRadius: 8, align: 'center', fullWidth: false }
@@ -95,8 +95,8 @@ function blockToHTML(block: EmailBlock): string {
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${block.bgColor}">
 <tr><td align="${block.align}" style="padding:${block.padding}px 32px">
 ${block.logoSrc ? `<img src="${block.logoSrc}" alt="${block.logoAlt}" width="${block.logoWidth}" style="display:block;${block.align === 'center' ? 'margin:0 auto;' : ''}max-width:${block.logoWidth}px;height:auto">` : ''}
-${block.title ? `<div style="color:${block.textColor};font-size:22px;font-weight:700;margin-top:${block.logoSrc ? 12 : 0}px;${block.align === 'center' ? 'text-align:center;' : ''}">${block.title}</div>` : ''}
-${block.subtitle ? `<div style="color:${block.textColor};font-size:14px;opacity:0.75;margin-top:4px;${block.align === 'center' ? 'text-align:center;' : ''}">${block.subtitle}</div>` : ''}
+${block.title ? `<div style="color:${block.textColor};font-family:${block.titleFont ?? 'Arial'},Arial,sans-serif;font-size:${block.titleSize ?? 24}px;font-weight:${block.titleBold ? '700' : '400'};font-style:${block.titleItalic ? 'italic' : 'normal'};margin-top:${block.logoSrc ? 12 : 0}px;${block.align === 'center' ? 'text-align:center;' : ''}">${block.title}</div>` : ''}
+${block.subtitle ? `<div style="color:${block.textColor};font-family:${block.subtitleFont ?? 'Arial'},Arial,sans-serif;font-size:${block.subtitleSize ?? 14}px;font-weight:${block.subtitleBold ? '700' : '400'};font-style:${block.subtitleItalic ? 'italic' : 'normal'};opacity:0.75;margin-top:4px;${block.align === 'center' ? 'text-align:center;' : ''}">${block.subtitle}</div>` : ''}
 </td></tr></table>`
     case 'image': return block.src ? `
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${block.bgColor}">
@@ -170,8 +170,8 @@ function BlockInCanvas({ block, selected, total, index, onSelect, onDelete, onDu
       case 'header': return (
         <div style={{ background: block.bgColor, padding: block.padding, textAlign: block.align as any }}>
           {block.logoSrc && <img src={block.logoSrc} alt={block.logoAlt} style={{ maxWidth: block.logoWidth, height: 'auto', display: 'block', margin: block.align === 'center' ? '0 auto' : undefined }} />}
-          {block.title && <div style={{ color: block.textColor, fontSize: 22, fontWeight: 700, marginTop: block.logoSrc ? 12 : 0 }}>{block.title}</div>}
-          {block.subtitle && <div style={{ color: block.textColor, fontSize: 13, opacity: 0.75, marginTop: 4 }}>{block.subtitle}</div>}
+          {block.title && <div style={{ color: block.textColor, fontFamily: `${block.titleFont ?? 'Arial'}, Arial, sans-serif`, fontSize: block.titleSize ?? 24, fontWeight: block.titleBold ? 700 : 400, fontStyle: block.titleItalic ? 'italic' : 'normal', marginTop: block.logoSrc ? 12 : 0 }}>{block.title}</div>}
+          {block.subtitle && <div style={{ color: block.textColor, fontFamily: `${block.subtitleFont ?? 'Arial'}, Arial, sans-serif`, fontSize: block.subtitleSize ?? 14, fontWeight: block.subtitleBold ? 700 : 400, fontStyle: block.subtitleItalic ? 'italic' : 'normal', opacity: 0.75, marginTop: 4 }}>{block.subtitle}</div>}
         </div>
       )
       case 'image': return (
@@ -226,6 +226,8 @@ function BlockInCanvas({ block, selected, total, index, onSelect, onDelete, onDu
 
 const btnStyle: React.CSSProperties = { background: 'rgba(255,255,255,0.95)', border: '1px solid #e5e5ea', borderRadius: 4, padding: '2px 6px', fontSize: 11, cursor: 'pointer', color: '#111' }
 
+const FONTS = ['Arial', 'Georgia', 'Trebuchet MS', 'Courier New', 'Verdana']
+
 // Stable module-level helpers — must NOT be defined inside components or focus is lost each keystroke
 function SettingsField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -237,6 +239,81 @@ function SettingsField({ label, children }: { label: string; children: React.Rea
 }
 
 const settingsInpStyle: React.CSSProperties = { width: '100%', background: '#f5f5f7', border: '1px solid #e5e5ea', borderRadius: 6, padding: '7px 10px', fontSize: 12, color: '#111', outline: 'none', boxSizing: 'border-box' }
+
+function TypographyRow({ font, size, bold, italic, onFont, onSize, onBold, onItalic }: {
+  font: string; size: number; bold: boolean; italic: boolean
+  onFont: (v: string) => void; onSize: (v: number) => void
+  onBold: (v: boolean) => void; onItalic: (v: boolean) => void
+}) {
+  return (
+    <div style={{ display: 'flex', gap: 4, marginTop: 6, alignItems: 'center' }}>
+      <select value={font} onChange={e => onFont(e.target.value)}
+        style={{ flex: 1, background: '#f5f5f7', border: '1px solid #e5e5ea', borderRadius: 6, padding: '5px 6px', fontSize: 11, color: '#111', outline: 'none' }}>
+        {FONTS.map(f => <option key={f}>{f}</option>)}
+      </select>
+      <input type="number" value={size} min={8} max={72} onChange={e => onSize(Number(e.target.value))}
+        style={{ width: 48, background: '#f5f5f7', border: '1px solid #e5e5ea', borderRadius: 6, padding: '5px 6px', fontSize: 11, color: '#111', outline: 'none', textAlign: 'center' }} />
+      <button onClick={() => onBold(!bold)}
+        style={{ width: 30, height: 30, borderRadius: 6, border: `1px solid ${bold ? '#111' : '#e5e5ea'}`, background: bold ? '#111' : '#f5f5f7', color: bold ? '#fff' : '#6e6e73', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+        B
+      </button>
+      <button onClick={() => onItalic(!italic)}
+        style={{ width: 30, height: 30, borderRadius: 6, border: `1px solid ${italic ? '#111' : '#e5e5ea'}`, background: italic ? '#111' : '#f5f5f7', color: italic ? '#fff' : '#6e6e73', fontStyle: 'italic', fontSize: 13, cursor: 'pointer' }}>
+        I
+      </button>
+    </div>
+  )
+}
+
+function RichTextEditor({ content, fontFamily, onChange }: { content: string; fontFamily: string; onChange: (v: string) => void }) {
+  const editorRef = useRef<HTMLDivElement>(null)
+  const [fontSize, setFontSize] = useState('16')
+
+  const exec = (cmd: string, value?: string) => {
+    editorRef.current?.focus()
+    document.execCommand(cmd, false, value)
+    if (editorRef.current) onChange(editorRef.current.innerHTML)
+  }
+
+  const fmtBtn = (label: string, cmd: string, val?: string, extra?: React.CSSProperties) => (
+    <button onMouseDown={e => { e.preventDefault(); exec(cmd, val) }}
+      style={{ padding: '4px 8px', border: '1px solid #e5e5ea', borderRadius: 5, background: '#f5f5f7', color: '#111', fontSize: 11, cursor: 'pointer', fontWeight: cmd === 'bold' ? 700 : 400, fontStyle: cmd === 'italic' ? 'italic' as const : 'normal', textDecoration: cmd === 'underline' ? 'underline' : 'none', ...extra }}>
+      {label}
+    </button>
+  )
+
+  return (
+    <div style={{ border: '1px solid #e5e5ea', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, padding: '6px 8px', background: '#f5f5f7', borderBottom: '1px solid #e5e5ea' }}>
+        <select onChange={e => exec('fontName', e.target.value)} defaultValue={fontFamily}
+          style={{ background: '#fff', border: '1px solid #e5e5ea', borderRadius: 5, padding: '3px 5px', fontSize: 10, color: '#111', outline: 'none', cursor: 'pointer' }}>
+          {FONTS.map(f => <option key={f} value={f}>{f}</option>)}
+        </select>
+        <select value={fontSize} onChange={e => { setFontSize(e.target.value); exec('fontSize', '7'); setTimeout(() => { editorRef.current?.querySelectorAll('font[size="7"]').forEach(el => { (el as HTMLElement).removeAttribute('size'); (el as HTMLElement).style.fontSize = `${e.target.value}px` }) }, 0) }}
+          style={{ background: '#fff', border: '1px solid #e5e5ea', borderRadius: 5, padding: '3px 5px', fontSize: 10, color: '#111', outline: 'none', cursor: 'pointer', width: 50 }}>
+          {[10, 12, 14, 16, 18, 20, 24, 28, 32, 36].map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        {fmtBtn('B', 'bold', undefined, { fontWeight: 700 })}
+        {fmtBtn('I', 'italic', undefined, { fontStyle: 'italic' })}
+        {fmtBtn('U', 'underline', undefined, { textDecoration: 'underline' })}
+        <div style={{ width: 1, background: '#e5e5ea', margin: '0 2px' }} />
+        {fmtBtn('≡', 'justifyLeft')}
+        {fmtBtn('≡', 'justifyCenter')}
+        {fmtBtn('≡', 'justifyRight')}
+      </div>
+      {/* Editable area */}
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={() => { if (editorRef.current) onChange(editorRef.current.innerHTML) }}
+        dangerouslySetInnerHTML={{ __html: content }}
+        style={{ minHeight: 120, padding: '10px 12px', fontSize: 14, color: '#111', outline: 'none', fontFamily: `${fontFamily}, Arial, sans-serif`, lineHeight: 1.7 }}
+      />
+    </div>
+  )
+}
 
 // ─── Block settings panel ─────────────────────────────────────────────────────
 
@@ -313,8 +390,24 @@ function BlockSettings({ block, onUpdate, uploadImg }: {
       {uploadField('Logo image', 'logoSrc', logoRef, 'email-logos')}
       <SettingsField label="Logo width (px)">{inp({ type: 'number', value: block.logoWidth, min: 40, max: 400, onChange: e => set('logoWidth', Number(e.target.value)) })}</SettingsField>
       {alignRow('align')}
-      <SettingsField label="Title">{inp({ type: 'text', value: block.title, onChange: e => set('title', e.target.value) })}</SettingsField>
-      <SettingsField label="Subtitle">{inp({ type: 'text', value: block.subtitle, onChange: e => set('subtitle', e.target.value) })}</SettingsField>
+      <SettingsField label="Title">
+        {inp({ type: 'text', value: block.title, onChange: e => set('title', e.target.value) })}
+        <TypographyRow
+          font={block.titleFont ?? 'Arial'} size={block.titleSize ?? 24}
+          bold={block.titleBold ?? true} italic={block.titleItalic ?? false}
+          onFont={v => set('titleFont', v)} onSize={v => set('titleSize', v)}
+          onBold={v => set('titleBold', v)} onItalic={v => set('titleItalic', v)}
+        />
+      </SettingsField>
+      <SettingsField label="Subtitle">
+        {inp({ type: 'text', value: block.subtitle, onChange: e => set('subtitle', e.target.value) })}
+        <TypographyRow
+          font={block.subtitleFont ?? 'Arial'} size={block.subtitleSize ?? 14}
+          bold={block.subtitleBold ?? false} italic={block.subtitleItalic ?? false}
+          onFont={v => set('subtitleFont', v)} onSize={v => set('subtitleSize', v)}
+          onBold={v => set('subtitleBold', v)} onItalic={v => set('subtitleItalic', v)}
+        />
+      </SettingsField>
       {numField('Padding', 'padding', 8, 80)}
     </div>
   )
@@ -335,18 +428,8 @@ function BlockSettings({ block, onUpdate, uploadImg }: {
   if (block.type === 'text') return (
     <div>
       <SettingsField label="Content">
-        <textarea
-          value={block.content}
-          onChange={e => set('content', e.target.value)}
-          rows={8}
-          style={{ width: '100%', background: '#f5f5f7', border: '1px solid #e5e5ea', borderRadius: 6, padding: '8px 10px', fontSize: 11, color: '#111', outline: 'none', resize: 'vertical', fontFamily: 'monospace', boxSizing: 'border-box' }}
-        />
-        <div style={{ fontSize: 10, color: '#aaa', marginTop: 4 }}>HTML accepted · use {'{{name}}'} for recipient</div>
-      </SettingsField>
-      <SettingsField label="Font">
-        <select value={block.fontFamily} onChange={e => set('fontFamily', e.target.value)} style={{ width: '100%', background: '#f5f5f7', border: '1px solid #e5e5ea', borderRadius: 6, padding: '7px 10px', fontSize: 12, color: '#111', outline: 'none' }}>
-          {['Arial', 'Georgia', 'Trebuchet MS', 'Courier New', 'Verdana'].map(f => <option key={f}>{f}</option>)}
-        </select>
+        <RichTextEditor content={block.content} fontFamily={block.fontFamily} onChange={v => set('content', v)} />
+        <div style={{ fontSize: 10, color: '#aaa', marginTop: 4 }}>Use {'{{name}}'} for recipient's name</div>
       </SettingsField>
       {numField('Padding', 'padding', 0, 80)}
       {colorRow('Background', 'bgColor')}
